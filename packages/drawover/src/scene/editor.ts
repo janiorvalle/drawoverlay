@@ -129,8 +129,14 @@ export class SceneEditor {
     void this.#onPaste(event);
   };
   readonly #onViewportChangeBound = (): void => this.#render();
+  readonly #onToolbarPointerDownBound = (event: PointerEvent): void => {
+    const target = event.target instanceof Element ? event.target : undefined;
+    if (target?.closest("button.close")) this.#cancelInlineEditor?.();
+  };
   readonly #shellVisibilityObserver: MutationObserver;
   readonly #onClearBound = (): void => {
+    this.#cancelActivePointerSession();
+    this.#cancelInlineEditor?.();
     this.#invalidateImageImports();
     this.#store.clear("Clear scene");
     this.#selectedIds.clear();
@@ -202,6 +208,11 @@ export class SceneEditor {
       passive: true,
     });
     window.addEventListener("resize", this.#onViewportChangeBound);
+    this.#toolbar.addEventListener(
+      "pointerdown",
+      this.#onToolbarPointerDownBound,
+      true,
+    );
     this.#shellVisibilityObserver = new MutationObserver(() => {
       if (this.#toolbar.hidden) {
         this.#cancelActivePointerSession();
@@ -251,6 +262,11 @@ export class SceneEditor {
     document.removeEventListener("paste", this.#onPasteBound);
     window.removeEventListener("scroll", this.#onViewportChangeBound);
     window.removeEventListener("resize", this.#onViewportChangeBound);
+    this.#toolbar.removeEventListener(
+      "pointerdown",
+      this.#onToolbarPointerDownBound,
+      true,
+    );
     this.#shellVisibilityObserver.disconnect();
     this.#host.removeEventListener(
       "drawover:clear-request",
@@ -414,7 +430,7 @@ export class SceneEditor {
       }
     }
     const onlySelected = this.#onlySelected();
-    if (handle && onlySelected) {
+    if (this.#tool === "select" && handle && onlySelected) {
       this.#beginHandleSession(handle, onlySelected, point, event.pointerId);
       this.#capture(event.pointerId);
       event.preventDefault();
@@ -610,10 +626,7 @@ export class SceneEditor {
     this.#release(event.pointerId);
     switch (session.kind) {
       case "draw":
-        if (
-          session.preview.geometry.width >= 4 ||
-          session.preview.geometry.height >= 4
-        ) {
+        if (isMeaningfulDraw(session.preview)) {
           this.#store.create(session.preview, `Create ${session.preview.type}`);
           this.#selectedIds = new Set([session.preview.id]);
         }
@@ -1117,7 +1130,8 @@ export class SceneEditor {
     }
     if (session?.kind === "marquee") marquee = session.current;
     this.#renderer.render(snapshot, {
-      selectedIds: this.#selectedIds,
+      selectedIds:
+        this.#tool === "select" ? this.#selectedIds : new Set<string>(),
       overrides,
       previews,
       ...(marquee ? { marquee } : {}),
@@ -1190,6 +1204,20 @@ function hasExternalFocus(host: HTMLElement): boolean {
     active !== document.body &&
     active !== document.documentElement &&
     active !== host
+  );
+}
+
+function isMeaningfulDraw(
+  annotation: ArrowAnnotation | RectAnnotation,
+): boolean {
+  if (annotation.type === "rect") {
+    return annotation.geometry.width >= 4 && annotation.geometry.height >= 4;
+  }
+  return (
+    Math.hypot(
+      annotation.end.x - annotation.start.x,
+      annotation.end.y - annotation.start.y,
+    ) >= 4
   );
 }
 

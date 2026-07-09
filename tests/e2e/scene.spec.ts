@@ -62,6 +62,7 @@ test("creates and transforms rectangles, arrows, and text", async ({
   await drag(page, { x: 205, y: 100 }, { x: 330, y: 175 });
   const arrow = scene.locator('[data-annotation-type="arrow"]');
   await expect(arrow).toHaveCount(1);
+  await tool(host, "select").click();
   const endpoint = scene.locator('[data-handle="arrow-end"]');
   const arrowLine = arrow.locator("line").nth(1);
   const oldEnd = await arrowLine.getAttribute("x2");
@@ -81,6 +82,20 @@ test("creates and transforms rectangles, arrows, and text", async ({
   await expect(scene.locator("[data-annotation-id]")).toHaveCount(0);
   await host.locator(".trigger").click();
   await expect(scene.locator("[data-annotation-id]")).toHaveCount(3);
+});
+
+test("closing from the toolbar cancels inline text entry", async ({ page }) => {
+  const host = page.locator("#drawover-root");
+  const scene = host.locator('[data-layer="scene"]');
+  await tool(host, "text").click();
+  await page.mouse.click(100, 120);
+  const editor = host.getByRole("textbox", { name: "Annotation text" });
+  await editor.fill("Uncommitted draft");
+
+  await host.getByRole("button", { name: "Close Drawover" }).click();
+  await expect(editor).toHaveCount(0);
+  await host.locator(".trigger").click();
+  await expect(scene.locator('[data-annotation-type="text"]')).toHaveCount(0);
 });
 
 test("supports marquee group moves, duplication, layers, delete, and deep history", async ({

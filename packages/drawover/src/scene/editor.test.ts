@@ -39,6 +39,7 @@ describe("scene interactions", () => {
     expect(svg?.querySelectorAll('[data-annotation-type="rect"]')).toHaveLength(
       1,
     );
+    expect(svg?.querySelectorAll("[data-handle]")).toHaveLength(0);
     document.dispatchEvent(
       new KeyboardEvent("keydown", { key: "z", ctrlKey: true }),
     );
@@ -51,6 +52,31 @@ describe("scene interactions", () => {
     expect(svg?.querySelectorAll('[data-annotation-type="rect"]')).toHaveLength(
       1,
     );
+  });
+
+  it("rejects degenerate rectangles but keeps meaningful arrows", () => {
+    instance = init();
+    instance.open();
+    const shadow = document.getElementById(DRAWOVER_HOST_ID)?.shadowRoot;
+    const svg = shadow?.querySelector<SVGSVGElement>('[data-layer="scene"]');
+    shadow
+      ?.querySelector<HTMLButtonElement>('button[data-mode="scene"]')
+      ?.click();
+    shadow
+      ?.querySelector<HTMLButtonElement>('button[data-tool="rect"]')
+      ?.click();
+    draw(svg, { x: 80, y: 100 }, { x: 240, y: 100 }, 28);
+    expect(svg?.querySelectorAll('[data-annotation-type="rect"]')).toHaveLength(
+      0,
+    );
+
+    shadow
+      ?.querySelector<HTMLButtonElement>('button[data-tool="arrow"]')
+      ?.click();
+    draw(svg, { x: 80, y: 120 }, { x: 240, y: 120 }, 29);
+    expect(
+      svg?.querySelectorAll('[data-annotation-type="arrow"]'),
+    ).toHaveLength(1);
   });
 
   it("hides annotations while the shell is closed and restores them on open", async () => {
@@ -314,6 +340,39 @@ describe("scene interactions", () => {
     });
   });
 
+  it("cancels active drawing and text entry when the scene is cleared", () => {
+    instance = init();
+    instance.open();
+    const shadow = document.getElementById(DRAWOVER_HOST_ID)?.shadowRoot;
+    const svg = shadow?.querySelector<SVGSVGElement>('[data-layer="scene"]');
+    shadow
+      ?.querySelector<HTMLButtonElement>('button[data-mode="scene"]')
+      ?.click();
+    shadow
+      ?.querySelector<HTMLButtonElement>('button[data-tool="rect"]')
+      ?.click();
+    svg?.dispatchEvent(pointer("pointerdown", 80, 100, { pointerId: 30 }));
+    svg?.dispatchEvent(pointer("pointermove", 240, 190, { pointerId: 30 }));
+    instance.clear();
+    svg?.dispatchEvent(pointer("pointerup", 240, 190, { pointerId: 30 }));
+    expect(svg?.querySelectorAll('[data-annotation-type="rect"]')).toHaveLength(
+      0,
+    );
+
+    shadow
+      ?.querySelector<HTMLButtonElement>('button[data-tool="text"]')
+      ?.click();
+    svg?.dispatchEvent(pointer("pointerdown", 100, 100, { pointerId: 31 }));
+    const editor = shadow?.querySelector<HTMLInputElement>(".inline-editor");
+    if (!editor) throw new Error("Text editor was not created.");
+    editor.value = "Draft";
+    instance.clear();
+    expect(shadow?.querySelector(".inline-editor")).toBeNull();
+    expect(svg?.querySelectorAll('[data-annotation-type="text"]')).toHaveLength(
+      0,
+    );
+  });
+
   it("labels, resizes, rotates, and edits arrow endpoints", () => {
     instance = init();
     instance.open();
@@ -379,6 +438,9 @@ describe("scene interactions", () => {
     svg?.dispatchEvent(pointer("pointerdown", 230, 80));
     svg?.dispatchEvent(pointer("pointermove", 310, 130));
     svg?.dispatchEvent(pointer("pointerup", 310, 130));
+    shadow
+      ?.querySelector<HTMLButtonElement>('button[data-tool="select"]')
+      ?.click();
     const endpoint = svg?.querySelector<SVGElement>(
       '[data-handle="arrow-end"]',
     );
