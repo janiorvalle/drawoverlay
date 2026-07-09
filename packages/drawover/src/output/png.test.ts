@@ -51,6 +51,7 @@ describe("composited PNG output", () => {
       "g",
     );
     selection.dataset.sceneUi = "true";
+    harness.svg.setAttribute("viewBox", "0 0 180 80");
     harness.svg.append(annotation, selection);
 
     await exportCompositedPng(
@@ -66,6 +67,8 @@ describe("composited PNG output", () => {
     expect(exported?.querySelector('[data-scene-ui="true"]')).toBeNull();
     expect(exported?.getAttribute("width")).toBe("200");
     expect(exported?.getAttribute("height")).toBe("100");
+    expect(exported?.getAttribute("viewBox")).toBe("0 0 200 100");
+    expect(exported?.getAttribute("preserveAspectRatio")).toBe("none");
     expect(
       exported
         ?.querySelector('[data-export-scene="true"]')
@@ -101,6 +104,7 @@ describe("composited PNG output", () => {
     const exported = harness.loadSvgImage.mock.calls[0]?.[0] as
       SVGSVGElement | undefined;
     expect(exported?.getAttribute("height")).toBe("1000");
+    expect(exported?.getAttribute("viewBox")).toBe("0 0 200 1000");
     expect(
       exported
         ?.querySelector('[data-export-scene="true"]')

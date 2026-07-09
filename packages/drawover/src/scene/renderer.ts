@@ -5,6 +5,7 @@ import type {
   SceneSnapshot,
 } from "../contracts/index.js";
 import { documentRectToViewport, documentToViewport } from "../coordinates.js";
+import { visualBounds } from "./model.js";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 const SYSTEM_FONT_FAMILY =
@@ -318,14 +319,11 @@ function handle(
 }
 
 function combinedBounds(annotations: readonly Annotation[]): DocumentRect {
-  const minX = Math.min(...annotations.map(({ geometry }) => geometry.x));
-  const minY = Math.min(...annotations.map(({ geometry }) => geometry.y));
-  const maxX = Math.max(
-    ...annotations.map(({ geometry }) => geometry.x + geometry.width),
-  );
-  const maxY = Math.max(
-    ...annotations.map(({ geometry }) => geometry.y + geometry.height),
-  );
+  const bounds = annotations.map(visualBounds);
+  const minX = Math.min(...bounds.map(({ x }) => x));
+  const minY = Math.min(...bounds.map(({ y }) => y));
+  const maxX = Math.max(...bounds.map(({ x, width }) => x + width));
+  const maxY = Math.max(...bounds.map(({ y, height }) => y + height));
   return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
 }
 

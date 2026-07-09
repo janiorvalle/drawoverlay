@@ -10,6 +10,7 @@ import {
   resizeAnnotation,
   translateAnnotation,
   updateArrowEndpoint,
+  visualBounds,
 } from "./model.js";
 
 const rect = (id: string, z: number): RectAnnotation => ({
@@ -104,7 +105,16 @@ describe("scene model operations", () => {
     const resized = resizeAnnotation(text, "se", { x: 150, y: 56 });
     expect(resized.type).toBe("text");
     if (resized.type !== "text") throw new Error("Expected text.");
-    expect(resized.fontSize).toBe(40);
+    expect(resized.fontSize).toBe(30);
+    expect(resized.geometry).toMatchObject({ width: 150, height: 42 });
+  });
+
+  it("returns document bounds for a rotated annotation", () => {
+    const bounds = visualBounds({ ...rect("rotated-bounds", 1), rotation: 90 });
+    expect(bounds.x).toBeCloseTo(30);
+    expect(bounds.y).toBeCloseTo(0);
+    expect(bounds.width).toBeCloseTo(60);
+    expect(bounds.height).toBeCloseTo(100);
   });
 
   it("edits a rotated arrow endpoint in the visible coordinate frame", () => {

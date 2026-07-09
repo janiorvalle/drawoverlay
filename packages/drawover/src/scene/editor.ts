@@ -19,6 +19,7 @@ import {
   resizeAnnotation,
   translateAnnotation,
   updateArrowEndpoint,
+  visualBounds,
   type ZOrderAction,
 } from "./model.js";
 import { SceneRenderer } from "./renderer.js";
@@ -603,8 +604,8 @@ export class SceneEditor {
       case "marquee": {
         const selected = this.#store
           .getSnapshot()
-          .annotations.filter(({ geometry }) =>
-            intersects(geometry, session.current),
+          .annotations.filter((annotation) =>
+            intersects(visualBounds(annotation), session.current),
           )
           .map(({ id }) => id);
         if (!session.additive) this.#selectedIds.clear();

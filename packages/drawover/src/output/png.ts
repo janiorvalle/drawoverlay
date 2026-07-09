@@ -157,6 +157,11 @@ function createExportSvg(
   clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
   clone.setAttribute("width", String(Math.max(options.width, 1)));
   clone.setAttribute("height", String(Math.max(options.height, 1)));
+  clone.setAttribute(
+    "viewBox",
+    `0 0 ${String(Math.max(options.width, 1))} ${String(Math.max(options.height, 1))}`,
+  );
+  clone.setAttribute("preserveAspectRatio", "none");
   return clone;
 }
 

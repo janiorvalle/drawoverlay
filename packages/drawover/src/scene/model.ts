@@ -75,14 +75,20 @@ export function resizeAnnotation(
   const directionX = handle.includes("w") ? -1 : 1;
   const directionY = handle.includes("n") ? -1 : 1;
   const delta = { x: point.x - opposite.x, y: point.y - opposite.y };
-  const width = Math.max(
-    minimum,
-    directionX * dotProduct(delta, horizontalAxis),
-  );
-  const height = Math.max(
-    minimum,
-    directionY * dotProduct(delta, verticalAxis),
-  );
+  let width = Math.max(minimum, directionX * dotProduct(delta, horizontalAxis));
+  let height = Math.max(minimum, directionY * dotProduct(delta, verticalAxis));
+  if (annotation.type === "text") {
+    const scale = Math.max(
+      minimum / Math.max(original.width, 1),
+      minimum / Math.max(original.height, 1),
+      Math.min(
+        width / Math.max(original.width, 1),
+        height / Math.max(original.height, 1),
+      ),
+    );
+    width = original.width * scale;
+    height = original.height * scale;
+  }
   const nextCenter = {
     x:
       opposite.x +
@@ -179,6 +185,28 @@ export function intersects(left: DocumentRect, right: DocumentRect): boolean {
     left.y + left.height < right.y ||
     right.y + right.height < left.y
   );
+}
+
+export function visualBounds(annotation: Annotation): DocumentRect {
+  const geometry = annotation.geometry;
+  if (annotation.rotation === 0) return { ...geometry };
+  const center = rectCenter(geometry);
+  const corners = [
+    { x: geometry.x, y: geometry.y },
+    { x: geometry.x + geometry.width, y: geometry.y },
+    { x: geometry.x, y: geometry.y + geometry.height },
+    {
+      x: geometry.x + geometry.width,
+      y: geometry.y + geometry.height,
+    },
+  ].map((point) => rotatePoint(point, center, annotation.rotation));
+  const xs = corners.map(({ x }) => x);
+  const ys = corners.map(({ y }) => y);
+  const minX = Math.min(...xs);
+  const minY = Math.min(...ys);
+  const maxX = Math.max(...xs);
+  const maxY = Math.max(...ys);
+  return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
 }
 
 export function reorderAnnotations(
