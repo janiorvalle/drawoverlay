@@ -1,7 +1,4 @@
-import type {
-  NoteAnnotation,
-  SceneStore,
-} from "../contracts/index.js";
+import type { NoteAnnotation, SceneStore } from "../contracts/index.js";
 
 interface GeneralNotesPanelOptions {
   createId?: () => string;
@@ -21,8 +18,7 @@ export function createGeneralNotesPanel(
 ): GeneralNotesPanel {
   const createId = options.createId ?? (() => crypto.randomUUID());
   let pendingEdit:
-    | { editor: HTMLTextAreaElement; id: string; text: string }
-    | undefined;
+    { editor: HTMLTextAreaElement; id: string; text: string } | undefined;
   let editTimer: ReturnType<typeof setTimeout> | undefined;
   let suppressRender = false;
   const toggle = document.createElement("button");
@@ -188,7 +184,8 @@ export function createGeneralNotesPanel(
   const unsubscribe = store.subscribe(() => {
     if (suppressRender) return;
     const root = panel.getRootNode();
-    const active = root instanceof ShadowRoot ? root.activeElement : document.activeElement;
+    const active =
+      root instanceof ShadowRoot ? root.activeElement : document.activeElement;
     if (active instanceof HTMLTextAreaElement && active.closest(".note-row")) {
       return;
     }
