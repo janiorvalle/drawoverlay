@@ -1,0 +1,21 @@
+{
+  "name": "@drawover/next-smoke",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "build": "next build",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint app next.config.mjs",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "drawover": "workspace:*",
+    "next": "16.2.10",
+    "react": "19.2.7",
+    "react-dom": "19.2.7"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3"
+  }
+}

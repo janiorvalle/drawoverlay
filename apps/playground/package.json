@@ -1,0 +1,17 @@
+{
+  "name": "@drawover/playground",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite --port 4173",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src vite.config.ts",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "drawover": "workspace:*"
+  },
+  "devDependencies": {}
+}

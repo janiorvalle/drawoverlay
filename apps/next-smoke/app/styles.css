@@ -1,0 +1,20 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  color: #172033;
+  background: #f3f5f7;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
+
+main {
+  width: min(640px, calc(100% - 32px));
+  margin: 80px auto;
+}
+
+h1 {
+  font-size: 28px;
+  letter-spacing: 0;
+}
