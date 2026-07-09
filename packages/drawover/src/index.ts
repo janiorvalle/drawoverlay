@@ -1,8 +1,10 @@
 import {
   createShell,
+  DRAWOVER_HOST_ID,
   type DrawoverInstance,
   type DrawoverOptions,
 } from "./shell/shell.js";
+import { createElementTargetingController } from "./targeting/controller.js";
 
 export type {
   Annotation,
@@ -33,11 +35,27 @@ let activeInstance: DrawoverInstance | undefined;
 export function init(options: DrawoverOptions = {}): DrawoverInstance {
   if (activeInstance) return activeInstance;
 
-  activeInstance = createShell({
+  const shell = createShell({
     ...options,
     onDestroy: () => {
       activeInstance = undefined;
     },
   });
+  const host = document.getElementById(DRAWOVER_HOST_ID);
+  if (!host) {
+    shell.destroy();
+    throw new Error("Drawover host was not mounted.");
+  }
+  const targeting = createElementTargetingController(host);
+  let destroyed = false;
+  activeInstance = {
+    ...shell,
+    destroy: () => {
+      if (destroyed) return;
+      destroyed = true;
+      targeting.destroy();
+      shell.destroy();
+    },
+  };
   return activeInstance;
 }
