@@ -8,6 +8,14 @@ afterEach(() => {
   instance?.destroy();
   instance = undefined;
   localStorage.clear();
+  Object.defineProperty(window, "innerWidth", {
+    configurable: true,
+    value: 1024,
+  });
+  Object.defineProperty(window, "innerHeight", {
+    configurable: true,
+    value: 768,
+  });
 });
 
 describe("scene interactions", () => {
@@ -177,7 +185,21 @@ describe("scene interactions", () => {
     expect(svg?.querySelectorAll('[data-annotation-type="rect"]')).toHaveLength(
       4,
     );
-    const duplicate = svg?.querySelectorAll<SVGGElement>(
+    let duplicate = svg?.querySelectorAll<SVGGElement>(
+      '[data-annotation-type="rect"]',
+    )[2];
+    duplicate?.dispatchEvent(
+      pointer("pointerdown", 90, 105, { altKey: true, pointerId: 6 }),
+    );
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    expect(svg?.querySelectorAll('[data-annotation-type="rect"]')).toHaveLength(
+      4,
+    );
+    expect(shadow?.querySelector(".scene-status")?.textContent).toBe(
+      "4 items / 2 selected",
+    );
+
+    duplicate = svg?.querySelectorAll<SVGGElement>(
       '[data-annotation-type="rect"]',
     )[2];
     duplicate?.dispatchEvent(
@@ -209,6 +231,85 @@ describe("scene interactions", () => {
     );
     expect(svg?.querySelectorAll('[data-annotation-type="rect"]')).toHaveLength(
       4,
+    );
+  });
+
+  it("scales text through its resize handle", () => {
+    instance = init();
+    instance.open();
+    const shadow = document.getElementById(DRAWOVER_HOST_ID)?.shadowRoot;
+    const svg = shadow?.querySelector<SVGSVGElement>('[data-layer="scene"]');
+    shadow
+      ?.querySelector<HTMLButtonElement>('button[data-mode="scene"]')
+      ?.click();
+    shadow
+      ?.querySelector<HTMLButtonElement>('button[data-tool="text"]')
+      ?.click();
+    svg?.dispatchEvent(pointer("pointerdown", 100, 100));
+    const editor = shadow?.querySelector<HTMLInputElement>(".inline-editor");
+    if (!editor) throw new Error("Text editor was not created.");
+    editor.value = "Scale me";
+    editor.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
+
+    const resize = svg?.querySelector<SVGElement>('[data-handle="se"]');
+    const startX = Number(resize?.getAttribute("cx"));
+    const startY = Number(resize?.getAttribute("cy"));
+    resize?.dispatchEvent(pointer("pointerdown", startX, startY));
+    svg?.dispatchEvent(pointer("pointermove", startX + 40, startY + 28));
+    svg?.dispatchEvent(pointer("pointerup", startX + 40, startY + 28));
+
+    expect(
+      Number(
+        svg
+          ?.querySelector('[data-annotation-type="text"] text')
+          ?.getAttribute("font-size"),
+      ),
+    ).toBeGreaterThan(20);
+  });
+
+  it("keeps the inline editor inside a mobile viewport", () => {
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      value: 375,
+    });
+    Object.defineProperty(window, "innerHeight", {
+      configurable: true,
+      value: 667,
+    });
+    instance = init();
+    instance.open();
+    const shadow = document.getElementById(DRAWOVER_HOST_ID)?.shadowRoot;
+    const svg = shadow?.querySelector<SVGSVGElement>('[data-layer="scene"]');
+    shadow
+      ?.querySelector<HTMLButtonElement>('button[data-mode="scene"]')
+      ?.click();
+    shadow
+      ?.querySelector<HTMLButtonElement>('button[data-tool="rect"]')
+      ?.click();
+    draw(svg, { x: 300, y: 600 }, { x: 360, y: 650 }, 8);
+    shadow
+      ?.querySelector<HTMLButtonElement>('button[data-tool="select"]')
+      ?.click();
+    let rectangle = svg?.querySelector<SVGGElement>(
+      '[data-annotation-type="rect"]',
+    );
+    rectangle?.dispatchEvent(
+      pointer("pointerdown", 340, 630, { pointerId: 9 }),
+    );
+    svg?.dispatchEvent(pointer("pointerup", 340, 630, { pointerId: 9 }));
+    rectangle = svg?.querySelector<SVGGElement>(
+      '[data-annotation-type="rect"]',
+    );
+    rectangle?.dispatchEvent(
+      pointer("pointerdown", 360, 650, { pointerId: 9 }),
+    );
+
+    const editor = shadow?.querySelector<HTMLInputElement>(".inline-editor");
+    expect(Number.parseFloat(editor?.style.left ?? "NaN")).toBeLessThanOrEqual(
+      107,
+    );
+    expect(Number.parseFloat(editor?.style.top ?? "NaN")).toBeLessThanOrEqual(
+      623,
     );
   });
 });

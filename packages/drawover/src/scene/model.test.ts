@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import type { ArrowAnnotation, RectAnnotation } from "../contracts/index.js";
+import type {
+  ArrowAnnotation,
+  DocumentPoint,
+  RectAnnotation,
+  TextAnnotation,
+} from "../contracts/index.js";
 import {
   reorderAnnotations,
   resizeAnnotation,
@@ -50,6 +55,79 @@ describe("scene model operations", () => {
     expect(resized.geometry).toEqual({ x: 10, y: 20, width: 170, height: 120 });
   });
 
+  it("resizes in a rotated annotation frame without moving the visual anchor", () => {
+    const original = { ...rect("rotated", 1), rotation: 90 };
+    const originalCenter = center(original.geometry);
+    const visualAnchor = rotate(
+      { x: original.geometry.x, y: original.geometry.y },
+      originalCenter,
+      original.rotation,
+    );
+    const pointer = { x: 50, y: 140 };
+
+    const resized = resizeAnnotation(original, "se", pointer);
+    const resizedCenter = center(resized.geometry);
+    expectPoint(
+      rotate(
+        { x: resized.geometry.x, y: resized.geometry.y },
+        resizedCenter,
+        resized.rotation,
+      ),
+      visualAnchor,
+    );
+    expectPoint(
+      rotate(
+        {
+          x: resized.geometry.x + resized.geometry.width,
+          y: resized.geometry.y + resized.geometry.height,
+        },
+        resizedCenter,
+        resized.rotation,
+      ),
+      pointer,
+    );
+  });
+
+  it("scales freestanding text when its geometry is resized", () => {
+    const text: TextAnnotation = {
+      id: "text",
+      type: "text",
+      geometry: { x: 0, y: 0, width: 100, height: 28 },
+      z: 1,
+      rotation: 0,
+      text: "Scale me",
+      color: "#000000",
+      fontSize: 20,
+      align: "left",
+    };
+
+    const resized = resizeAnnotation(text, "se", { x: 150, y: 56 });
+    expect(resized.type).toBe("text");
+    if (resized.type !== "text") throw new Error("Expected text.");
+    expect(resized.fontSize).toBe(40);
+  });
+
+  it("edits a rotated arrow endpoint in the visible coordinate frame", () => {
+    const arrow: ArrowAnnotation = {
+      id: "rotated-arrow",
+      type: "arrow",
+      geometry: { x: 0, y: 0, width: 100, height: 0 },
+      z: 1,
+      rotation: 90,
+      start: { x: 0, y: 0 },
+      end: { x: 100, y: 0 },
+      color: "#000000",
+      strokeWidth: 2,
+    };
+    const visualStart = rotate(arrow.start, center(arrow.geometry), 90);
+    const visualEnd = { x: 80, y: 80 };
+
+    const updated = updateArrowEndpoint(arrow, "end", visualEnd);
+    const updatedCenter = center(updated.geometry);
+    expectPoint(rotate(updated.start, updatedCenter, 90), visualStart);
+    expectPoint(rotate(updated.end, updatedCenter, 90), visualEnd);
+  });
+
   it("moves a multi-selection through each z-order operation", () => {
     const annotations = [rect("one", 1), rect("two", 2), rect("three", 3)];
     const selected = new Set(["one"]);
@@ -61,3 +139,29 @@ describe("scene model operations", () => {
     ).toEqual(["two", "three", "one"]);
   });
 });
+
+function center(rectangle: RectAnnotation["geometry"]): DocumentPoint {
+  return {
+    x: rectangle.x + rectangle.width / 2,
+    y: rectangle.y + rectangle.height / 2,
+  };
+}
+
+function rotate(
+  point: DocumentPoint,
+  origin: DocumentPoint,
+  degrees: number,
+): DocumentPoint {
+  const radians = (degrees * Math.PI) / 180;
+  const x = point.x - origin.x;
+  const y = point.y - origin.y;
+  return {
+    x: origin.x + x * Math.cos(radians) - y * Math.sin(radians),
+    y: origin.y + x * Math.sin(radians) + y * Math.cos(radians),
+  };
+}
+
+function expectPoint(actual: DocumentPoint, expected: DocumentPoint): void {
+  expect(actual.x).toBeCloseTo(expected.x);
+  expect(actual.y).toBeCloseTo(expected.y);
+}

@@ -74,7 +74,9 @@ export async function exportCompositedPng(
 
   let annotationImage: CanvasImageSource;
   try {
-    annotationImage = await dependencies.loadSvgImage(options.annotationSvg);
+    annotationImage = await dependencies.loadSvgImage(
+      createExportSvg(options.annotationSvg),
+    );
   } catch (error) {
     throw pngError(
       "Could not render the annotation SVG for PNG export.",
@@ -113,9 +115,11 @@ function hasRenderableSource(node: Node): boolean {
 async function loadSvgImage(svg: SVGSVGElement): Promise<HTMLImageElement> {
   const clone = svg.cloneNode(true) as SVGSVGElement;
   const bounds = svg.getBoundingClientRect();
+  const width = Number(svg.getAttribute("width")) || bounds.width;
+  const height = Number(svg.getAttribute("height")) || bounds.height;
   clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-  clone.setAttribute("width", String(Math.max(bounds.width, 1)));
-  clone.setAttribute("height", String(Math.max(bounds.height, 1)));
+  clone.setAttribute("width", String(Math.max(width, 1)));
+  clone.setAttribute("height", String(Math.max(height, 1)));
   const source = new XMLSerializer().serializeToString(clone);
   const image = new Image();
 
@@ -126,6 +130,18 @@ async function loadSvgImage(svg: SVGSVGElement): Promise<HTMLImageElement> {
     image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(source)}`;
   });
   return image;
+}
+
+function createExportSvg(svg: SVGSVGElement): SVGSVGElement {
+  const clone = svg.cloneNode(true) as SVGSVGElement;
+  const bounds = svg.getBoundingClientRect();
+  for (const element of clone.querySelectorAll('[data-scene-ui="true"]')) {
+    element.remove();
+  }
+  clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+  clone.setAttribute("width", String(Math.max(bounds.width, 1)));
+  clone.setAttribute("height", String(Math.max(bounds.height, 1)));
+  return clone;
 }
 
 async function encodePng(canvas: HTMLCanvasElement): Promise<Blob> {

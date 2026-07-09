@@ -57,6 +57,7 @@ interface MoveSession {
   originals: ReadonlyMap<string, Annotation>;
   drafts: Map<string, Annotation>;
   duplicate: boolean;
+  selectedBeforeDuplicate: ReadonlySet<string>;
 }
 
 interface ResizeSession {
@@ -431,6 +432,7 @@ export class SceneEditor {
         this.#render();
         return;
       }
+      const selectedBeforeDuplicate = new Set(this.#selectedIds);
       const originals = new Map<string, Annotation>();
       let z = nextZ(this.#store.getSnapshot());
       for (const selectedId of this.#selectedIds) {
@@ -455,6 +457,7 @@ export class SceneEditor {
         originals,
         drafts: new Map(originals),
         duplicate: event.altKey,
+        selectedBeforeDuplicate,
       };
       this.#capture(event.pointerId);
       this.#render();
@@ -682,8 +685,11 @@ export class SceneEditor {
           : "";
     input.placeholder =
       annotation?.type === "rect" ? "Rectangle label" : "Type text";
-    input.style.left = `${String(Math.max(8, viewportPoint.x))}px`;
-    input.style.top = `${String(Math.max(8, viewportPoint.y))}px`;
+    const editorWidth = Math.min(260, Math.max(0, window.innerWidth - 24));
+    const maxLeft = Math.max(8, window.innerWidth - editorWidth - 8);
+    const maxTop = Math.max(8, window.innerHeight - 44);
+    input.style.left = `${String(clamp(viewportPoint.x, 8, maxLeft))}px`;
+    input.style.top = `${String(clamp(viewportPoint.y, 8, maxTop))}px`;
     this.#shadow.querySelector(".root")?.append(input);
     this.#inlineEditor = input;
     let finished = false;
@@ -777,6 +783,11 @@ export class SceneEditor {
     }
     if (event.key === "Escape") {
       event.preventDefault();
+      const session = this.#session;
+      if (session) this.#release(session.pointerId);
+      if (session?.kind === "move" && session.duplicate) {
+        this.#selectedIds = new Set(session.selectedBeforeDuplicate);
+      }
       this.#session = undefined;
       this.#setTool("select");
       return;
@@ -1057,6 +1068,10 @@ function normalizeDegrees(degrees: number): number {
 
 function textWidth(text: string, fontSize: number): number {
   return Math.max(40, text.length * fontSize * 0.62);
+}
+
+function clamp(value: number, minimum: number, maximum: number): number {
+  return Math.min(Math.max(value, minimum), maximum);
 }
 
 function hasMoved(

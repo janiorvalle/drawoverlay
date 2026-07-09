@@ -120,6 +120,11 @@ describe("SVG scene renderer", () => {
         .querySelector('[data-annotation-id="rect"] text')
         ?.getAttribute("font-weight"),
     ).toBe("700");
+    expect(
+      svg
+        .querySelector('[data-annotation-id="rect"] text')
+        ?.getAttribute("font-family"),
+    ).toContain("system-ui");
 
     const arrow = svg.querySelectorAll('[data-annotation-id="arrow"] line')[1];
     expect(arrow?.getAttribute("stroke")).toBe("#1769e0");
@@ -133,6 +138,7 @@ describe("SVG scene renderer", () => {
     const text = svg.querySelector('[data-annotation-id="text"] text');
     expect(text?.getAttribute("fill")).toBe("#111111");
     expect(text?.getAttribute("font-size")).toBe("18");
+    expect(text?.getAttribute("font-family")).toContain("system-ui");
     expect(text?.getAttribute("text-anchor")).toBe("end");
 
     const image = svg.querySelector('[data-annotation-id="image"] image');
@@ -144,6 +150,7 @@ describe("SVG scene renderer", () => {
         .querySelector('[data-annotation-id="pin"] circle')
         ?.getAttribute("fill"),
     ).toBe("#e5484d");
+    expect(svg.querySelectorAll('[data-scene-ui="true"]')).toHaveLength(1);
     expect(svg.querySelectorAll("[style]")).toHaveLength(0);
   });
 });

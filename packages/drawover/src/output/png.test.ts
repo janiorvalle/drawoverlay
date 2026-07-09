@@ -28,9 +28,39 @@ describe("composited PNG output", () => {
     expect(result).toBe(harness.png);
     expect(harness.loadScreenshotLibrary).toHaveBeenCalledOnce();
     expect(harness.toCanvas).toHaveBeenCalledOnce();
-    expect(harness.loadSvgImage).toHaveBeenCalledWith(harness.svg);
+    expect(harness.loadSvgImage).toHaveBeenCalledOnce();
+    expect(harness.loadSvgImage.mock.calls[0]?.[0]).not.toBe(harness.svg);
     expect(harness.drawImage).toHaveBeenCalledOnce();
     expect(harness.encodePng).toHaveBeenCalledWith(harness.canvas);
+  });
+
+  it("removes selection chrome from the standalone annotation SVG", async () => {
+    const harness = createHarness();
+    const annotation = document.createElementNS(
+      "http://www.w3.org/2000/svg",
+      "g",
+    );
+    annotation.dataset.annotationId = "rect-1";
+    const selection = document.createElementNS(
+      "http://www.w3.org/2000/svg",
+      "g",
+    );
+    selection.dataset.sceneUi = "true";
+    harness.svg.append(annotation, selection);
+
+    await exportCompositedPng(
+      { annotationSvg: harness.svg, page: harness.page },
+      harness.dependencies,
+    );
+
+    const exported = harness.loadSvgImage.mock.calls[0]?.[0] as
+      SVGSVGElement | undefined;
+    expect(
+      exported?.querySelector('[data-annotation-id="rect-1"]'),
+    ).not.toBeNull();
+    expect(exported?.querySelector('[data-scene-ui="true"]')).toBeNull();
+    expect(exported?.getAttribute("width")).toBe("180");
+    expect(exported?.getAttribute("height")).toBe("80");
   });
 
   it("excludes the Shadow DOM overlay host from the page capture", async () => {

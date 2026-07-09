@@ -40,6 +40,15 @@ test("creates and transforms rectangles, arrows, and text", async ({
   const rotation = Number(transform?.match(/rotate\(([-\d.]+)/)?.[1]);
   expect(rotation % 15).toBe(0);
 
+  const beforeRotatedResize = await rectangle
+    .locator("rect")
+    .getAttribute("width");
+  await dragLocator(page, southeast, { x: 25, y: 20 });
+  const afterRotatedResize = await rectangle
+    .locator("rect")
+    .getAttribute("width");
+  expect(Number(afterRotatedResize)).not.toBe(Number(beforeRotatedResize));
+
   await tool(host, "arrow").click();
   await drag(page, { x: 205, y: 100 }, { x: 330, y: 175 });
   const arrow = scene.locator('[data-annotation-type="arrow"]');

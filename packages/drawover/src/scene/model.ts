@@ -60,18 +60,50 @@ export function resizeAnnotation(
   minimum = 8,
 ): Annotation {
   const original = annotation.geometry;
-  const opposite = {
-    x: handle.includes("w") ? original.x + original.width : original.x,
-    y: handle.includes("n") ? original.y + original.height : original.y,
+  const center = rectCenter(original);
+  const opposite = rotatePoint(
+    {
+      x: handle.includes("w") ? original.x + original.width : original.x,
+      y: handle.includes("n") ? original.y + original.height : original.y,
+    },
+    center,
+    annotation.rotation,
+  );
+  const radians = degreesToRadians(annotation.rotation);
+  const horizontalAxis = { x: Math.cos(radians), y: Math.sin(radians) };
+  const verticalAxis = { x: -Math.sin(radians), y: Math.cos(radians) };
+  const directionX = handle.includes("w") ? -1 : 1;
+  const directionY = handle.includes("n") ? -1 : 1;
+  const delta = { x: point.x - opposite.x, y: point.y - opposite.y };
+  const width = Math.max(
+    minimum,
+    directionX * dotProduct(delta, horizontalAxis),
+  );
+  const height = Math.max(
+    minimum,
+    directionY * dotProduct(delta, verticalAxis),
+  );
+  const nextCenter = {
+    x:
+      opposite.x +
+      horizontalAxis.x * directionX * (width / 2) +
+      verticalAxis.x * directionY * (height / 2),
+    y:
+      opposite.y +
+      horizontalAxis.y * directionX * (width / 2) +
+      verticalAxis.y * directionY * (height / 2),
   };
-  const horizontal = handle.includes("w")
-    ? Math.min(point.x, opposite.x - minimum)
-    : Math.max(point.x, opposite.x + minimum);
-  const vertical = handle.includes("n")
-    ? Math.min(point.y, opposite.y - minimum)
-    : Math.max(point.y, opposite.y + minimum);
   const next = structuredClone(annotation);
-  next.geometry = normalizeRect(opposite, { x: horizontal, y: vertical });
+  next.geometry = {
+    x: nextCenter.x - width / 2,
+    y: nextCenter.y - height / 2,
+    width,
+    height,
+  };
+  if (next.type === "text") {
+    const scale = height / Math.max(original.height, 1);
+    next.fontSize = Math.max(8, next.fontSize * scale);
+  }
   return next;
 }
 
@@ -81,9 +113,52 @@ export function updateArrowEndpoint(
   point: DocumentPoint,
 ): ArrowAnnotation {
   const next = structuredClone(annotation);
-  next[endpoint] = { ...point };
+  const center = rectCenter(annotation.geometry);
+  const oppositeEndpoint =
+    endpoint === "end" ? annotation.start : annotation.end;
+  const oppositeVisual = rotatePoint(
+    oppositeEndpoint,
+    center,
+    annotation.rotation,
+  );
+  const visualStart = endpoint === "start" ? point : oppositeVisual;
+  const visualEnd = endpoint === "end" ? point : oppositeVisual;
+  const visualCenter = {
+    x: (visualStart.x + visualEnd.x) / 2,
+    y: (visualStart.y + visualEnd.y) / 2,
+  };
+  next.start = rotatePoint(visualStart, visualCenter, -annotation.rotation);
+  next.end = rotatePoint(visualEnd, visualCenter, -annotation.rotation);
   next.geometry = arrowGeometry(next.start, next.end);
   return next;
+}
+
+function rectCenter(rect: DocumentRect): DocumentPoint {
+  return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+}
+
+function rotatePoint(
+  point: DocumentPoint,
+  center: DocumentPoint,
+  degrees: number,
+): DocumentPoint {
+  const radians = degreesToRadians(degrees);
+  const cosine = Math.cos(radians);
+  const sine = Math.sin(radians);
+  const x = point.x - center.x;
+  const y = point.y - center.y;
+  return {
+    x: center.x + x * cosine - y * sine,
+    y: center.y + x * sine + y * cosine,
+  };
+}
+
+function dotProduct(left: DocumentPoint, right: DocumentPoint): number {
+  return left.x * right.x + left.y * right.y;
+}
+
+function degreesToRadians(degrees: number): number {
+  return (degrees * Math.PI) / 180;
 }
 
 export function duplicateAnnotation(

@@ -7,6 +7,8 @@ import type {
 import { documentRectToViewport, documentToViewport } from "../coordinates.js";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
+const SYSTEM_FONT_FAMILY =
+  'ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
 
 export interface RenderState {
   selectedIds: ReadonlySet<string>;
@@ -51,7 +53,10 @@ function renderAnnotation(
 ): SVGGElement {
   const group = svgElement("g");
   group.classList.add("scene-node");
-  if (preview) group.classList.add("scene-preview");
+  if (preview) {
+    group.classList.add("scene-preview");
+    group.dataset.sceneUi = "true";
+  }
   group.dataset.annotationId = annotation.id;
   group.dataset.annotationType = annotation.type;
 
@@ -92,6 +97,7 @@ function renderAnnotation(
                 : viewportGeometry.x + viewportGeometry.width / 2,
           y: viewportGeometry.y + viewportGeometry.height / 2,
           fill: annotation.stroke,
+          "font-family": SYSTEM_FONT_FAMILY,
           "font-size": 14,
           "font-weight": 700,
           "text-anchor":
@@ -117,6 +123,7 @@ function renderAnnotation(
               : viewportGeometry.x + viewportGeometry.width / 2,
         y: viewportGeometry.y + annotation.fontSize,
         fill: annotation.color,
+        "font-family": SYSTEM_FONT_FAMILY,
         "font-size": annotation.fontSize,
         "font-weight": 600,
         "text-anchor":
@@ -176,6 +183,7 @@ function renderArrow(annotation: ArrowAnnotation): SVGElement[] {
   });
   const hitTarget = svgElement("line");
   hitTarget.classList.add("arrow-hit-target");
+  hitTarget.dataset.sceneUi = "true";
   setAttributes(hitTarget, {
     x1: start.x,
     y1: start.y,
@@ -218,6 +226,7 @@ function renderArrow(annotation: ArrowAnnotation): SVGElement[] {
 function renderSingleSelection(annotation: Annotation): SVGGElement {
   const group = svgElement("g");
   group.classList.add("selection-ui");
+  group.dataset.sceneUi = "true";
   group.dataset.selectionFor = annotation.id;
   const geometry = documentRectToViewport(annotation.geometry);
   if (annotation.rotation !== 0) {
@@ -269,6 +278,7 @@ function renderSingleSelection(annotation: Annotation): SVGGElement {
 function renderGroupSelection(annotations: readonly Annotation[]): SVGGElement {
   const group = svgElement("g");
   group.classList.add("selection-ui", "group-selection");
+  group.dataset.sceneUi = "true";
   group.append(
     selectionBox(documentRectToViewport(combinedBounds(annotations))),
   );
@@ -278,6 +288,7 @@ function renderGroupSelection(annotations: readonly Annotation[]): SVGGElement {
 function renderMarquee(rect: DocumentRect): SVGRectElement {
   const element = selectionBox(documentRectToViewport(rect));
   element.classList.add("marquee");
+  element.dataset.sceneUi = "true";
   return element;
 }
 
