@@ -1,0 +1,25 @@
+# Local planning and review artifacts (D10)
+PLAN.md
+*.local.md
+notes/
+reviews/
+
+# Secrets and environment files (D11)
+.env
+.env.*
+!.env.example
+
+# Dependencies and generated output
+node_modules/
+dist/
+.next/
+coverage/
+playwright-report/
+test-results/
+*.tgz
+
+# Local tooling
+.DS_Store
+.idea/
+.vscode/
+*.log
