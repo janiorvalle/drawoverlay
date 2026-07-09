@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import type { SceneSnapshot } from "../contracts/index.js";
 import {
   section5Expected,
   section5PageContext,
@@ -9,6 +10,10 @@ import {
   allAnnotationsScene,
 } from "./fixtures/all-annotations.fixture.js";
 import { serializeReview } from "./serializer.js";
+
+afterEach(() => {
+  document.body.replaceChildren();
+});
 
 describe("output serializer", () => {
   it("implements the frozen section 5 serializer contract exactly", () => {
@@ -50,6 +55,45 @@ describe("output serializer", () => {
 
     expect(image.indexOf("Below <nav>")).toBeLessThan(
       image.indexOf("Doc coords:"),
+    );
+  });
+
+  it("derives missing spatial narration from a nearby named live element", () => {
+    const main = document.createElement("main");
+    main.id = "content";
+    main.getBoundingClientRect = () =>
+      ({
+        bottom: 500,
+        height: 300,
+        left: 100,
+        right: 900,
+        top: 200,
+        width: 800,
+        x: 100,
+        y: 200,
+        toJSON: () => ({}),
+      }) satisfies DOMRect;
+    document.body.append(main);
+    const scene = {
+      version: 1,
+      annotations: [
+        {
+          id: "proposed-banner",
+          type: "rect",
+          geometry: { x: 100, y: 100, width: 800, height: 64 },
+          z: 1,
+          rotation: 0,
+          stroke: "#2563eb",
+          fill: "#dbeafe",
+          strokeWidth: 2,
+        },
+      ],
+    } as const satisfies SceneSnapshot;
+
+    const { markdown } = serializeReview(scene, allAnnotationsPageContext);
+
+    expect(markdown).toContain(
+      '- Above <main id="content">\n- Doc coords: 100,100 → 900,164',
     );
   });
 

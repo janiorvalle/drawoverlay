@@ -10,6 +10,7 @@ import type {
   Serializer,
   TextAnnotation,
 } from "../contracts/index.js";
+import { viewportRectToDocument } from "../coordinates.js";
 
 const DRAWING_TYPES = new Set<Annotation["type"]>([
   "rect",
@@ -132,7 +133,7 @@ function formatDrawing(annotation: Annotation, number: number): string[] {
 function formatRectangle(annotation: RectAnnotation, number: number): string[] {
   const label = annotation.label ? `: "${quoted(annotation.label)}"` : "";
   const lines = [`### [${formatNumber(number)}] Rectangle${label}`];
-  appendSpatialThenCoordinates(lines, annotation);
+  appendSpatialThenCoordinates(lines, annotation, spatialNarration(annotation));
   if (annotation.label) {
     lines.push(
       `- Contains label text: "${quoted(annotation.label)}"${annotation.labelAlign ? ` (${annotation.labelAlign} side)` : ""}`,
@@ -144,8 +145,9 @@ function formatRectangle(annotation: RectAnnotation, number: number): string[] {
 
 function formatArrow(annotation: ArrowAnnotation, number: number): string[] {
   const lines = [`### [${formatNumber(number)}] Arrow`];
-  if (annotation.spatialDescription) {
-    lines.push(`- ${oneLine(annotation.spatialDescription)}`);
+  const spatial = spatialNarration(annotation);
+  if (spatial) {
+    lines.push(`- ${oneLine(spatial)}`);
   }
   lines.push(
     `- Start/end: ${formatPoint(annotation.start)} → ${formatPoint(annotation.end)} (doc coords)`,
@@ -158,8 +160,9 @@ function formatText(annotation: TextAnnotation, number: number): string[] {
   const lines = [
     `### [${formatNumber(number)}] Text: "${quoted(annotation.text)}"`,
   ];
-  if (annotation.spatialDescription) {
-    lines.push(`- ${oneLine(annotation.spatialDescription)}`);
+  const spatial = spatialNarration(annotation);
+  if (spatial) {
+    lines.push(`- ${oneLine(spatial)}`);
   } else {
     lines.push(`- Doc coords: ${formatRect(annotation.geometry)}`);
   }
@@ -172,7 +175,7 @@ function formatImage(annotation: ImageAnnotation, number: number): string[] {
   const lines = [
     `### [${formatNumber(number)}] Image: "${quoted(annotation.alt)}"`,
   ];
-  appendSpatialThenCoordinates(lines, annotation);
+  appendSpatialThenCoordinates(lines, annotation, spatialNarration(annotation));
   if (annotation.opacity !== 1) {
     lines.push(`- Opacity: ${formatNumber(annotation.opacity)}`);
   }
@@ -183,11 +186,77 @@ function formatImage(annotation: ImageAnnotation, number: number): string[] {
 function appendSpatialThenCoordinates(
   lines: string[],
   annotation: RectAnnotation | ImageAnnotation,
+  spatial: string | undefined,
 ): void {
-  if (annotation.spatialDescription) {
-    lines.push(`- ${oneLine(annotation.spatialDescription)}`);
+  if (spatial) {
+    lines.push(`- ${oneLine(spatial)}`);
   }
   lines.push(`- Doc coords: ${formatRect(annotation.geometry)}`);
+}
+
+function spatialNarration(
+  annotation:
+    RectAnnotation | ArrowAnnotation | TextAnnotation | ImageAnnotation,
+): string | undefined {
+  if (annotation.spatialDescription) return annotation.spatialDescription;
+
+  const currentDocument = Reflect.get(globalThis, "document") as
+    Document | undefined;
+  if (!currentDocument) return undefined;
+
+  const candidates = currentDocument.querySelectorAll<HTMLElement>(
+    "[data-testid], [id], main, nav, header, footer, form, aside, section[aria-label]",
+  );
+  let nearest:
+    | { element: HTMLElement; rect: ReturnType<typeof viewportRectToDocument> }
+    | undefined;
+  let nearestDistance = Number.POSITIVE_INFINITY;
+
+  for (const element of candidates) {
+    if (element.dataset.drawoverRuntime) continue;
+    const rect = viewportRectToDocument(element.getBoundingClientRect());
+    if (rect.width === 0 && rect.height === 0) continue;
+    const distance = rectDistance(annotation.geometry, rect);
+    if (distance < nearestDistance) {
+      nearest = { element, rect };
+      nearestDistance = distance;
+    }
+  }
+
+  if (!nearest || nearestDistance > 480) return undefined;
+  const reference = formatLiveElement(nearest.element);
+  const drawing = annotation.geometry;
+  const target = nearest.rect;
+  if (drawing.y + drawing.height <= target.y) return `Above ${reference}`;
+  if (drawing.y >= target.y + target.height) return `Below ${reference}`;
+  if (drawing.x + drawing.width <= target.x) return `Left of ${reference}`;
+  if (drawing.x >= target.x + target.width) return `Right of ${reference}`;
+  return `Overlapping ${reference}`;
+}
+
+function rectDistance(
+  first: { x: number; y: number; width: number; height: number },
+  second: { x: number; y: number; width: number; height: number },
+): number {
+  const horizontal = Math.max(
+    second.x - (first.x + first.width),
+    first.x - (second.x + second.width),
+    0,
+  );
+  const vertical = Math.max(
+    second.y - (first.y + first.height),
+    first.y - (second.y + second.height),
+    0,
+  );
+  return Math.hypot(horizontal, vertical);
+}
+
+function formatLiveElement(element: HTMLElement): string {
+  const tag = element.tagName.toLowerCase();
+  const testId = element.dataset.testid;
+  if (testId) return `<${tag} data-testid="${attributeValue(testId)}">`;
+  if (element.id) return `<${tag} id="${attributeValue(element.id)}">`;
+  return `<${tag}>`;
 }
 
 function appendRotation(lines: string[], rotation: number): void {
