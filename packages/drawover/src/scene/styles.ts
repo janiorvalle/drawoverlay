@@ -151,8 +151,14 @@ export const sceneStyles = `
 @media (max-width: 720px) {
   .toolbar {
     width: min(360px, calc(100vw - 64px));
-    max-height: min(60vh, 320px);
-    overflow-y: auto;
+    max-height: none;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .toolbar > * {
+    flex: 0 0 auto;
   }
 
   .brand,

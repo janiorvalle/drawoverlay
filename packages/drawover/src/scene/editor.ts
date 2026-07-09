@@ -53,6 +53,7 @@ interface MoveSession {
   kind: "move";
   pointerId: number;
   start: DocumentPoint;
+  clickedId: string;
   originals: ReadonlyMap<string, Annotation>;
   drafts: Map<string, Annotation>;
   duplicate: boolean;
@@ -137,6 +138,7 @@ export class SceneEditor {
   #session: PointerSession | undefined;
   #inlineEditor: HTMLInputElement | undefined;
   #lastAnnotationClick: { id: string; at: number } | undefined;
+  #suppressDoubleClickUntil = 0;
   #destroyed = false;
 
   constructor(options: SceneEditorOptions) {
@@ -374,8 +376,8 @@ export class SceneEditor {
       id !== undefined &&
       this.#lastAnnotationClick?.id === id &&
       event.timeStamp - this.#lastAnnotationClick.at < 500;
-    if (id) this.#lastAnnotationClick = { id, at: event.timeStamp };
-    if (this.#tool === "select" && (event.detail >= 2 || repeatedClick) && id) {
+    if (this.#tool === "select" && repeatedClick && id) {
+      this.#lastAnnotationClick = undefined;
       const annotation = this.#store.getById(id);
       if (annotation?.type === "rect" || annotation?.type === "text") {
         this.#openTextEditor(
@@ -449,6 +451,7 @@ export class SceneEditor {
         kind: "move",
         pointerId: event.pointerId,
         start: point,
+        clickedId: id,
         originals,
         drafts: new Map(originals),
         duplicate: event.altKey,
@@ -601,6 +604,15 @@ export class SceneEditor {
         break;
       }
       case "move":
+        if (hasMoved(session.originals, session.drafts)) {
+          this.#lastAnnotationClick = undefined;
+          this.#suppressDoubleClickUntil = event.timeStamp + 600;
+        } else {
+          this.#lastAnnotationClick = {
+            id: session.clickedId,
+            at: event.timeStamp,
+          };
+        }
         this.#store.transaction(
           session.duplicate ? "Duplicate and move" : "Move selection",
           (transaction) => {
@@ -625,7 +637,12 @@ export class SceneEditor {
   }
 
   #onDoubleClick(event: MouseEvent): void {
-    if (!this.#isSceneActive() || this.#inlineEditor) return;
+    if (
+      !this.#isSceneActive() ||
+      this.#inlineEditor ||
+      event.timeStamp < this.#suppressDoubleClickUntil
+    )
+      return;
     const target = event.target instanceof Element ? event.target : undefined;
     const id = target?.closest<SVGGElement>("[data-annotation-id]")?.dataset
       .annotationId;
@@ -1040,6 +1057,22 @@ function normalizeDegrees(degrees: number): number {
 
 function textWidth(text: string, fontSize: number): number {
   return Math.max(40, text.length * fontSize * 0.62);
+}
+
+function hasMoved(
+  originals: ReadonlyMap<string, Annotation>,
+  drafts: ReadonlyMap<string, Annotation>,
+): boolean {
+  for (const [id, original] of originals) {
+    const draft = drafts.get(id);
+    if (
+      draft &&
+      (draft.geometry.x !== original.geometry.x ||
+        draft.geometry.y !== original.geometry.y)
+    )
+      return true;
+  }
+  return false;
 }
 
 function readDataUrl(file: File): Promise<string> {
