@@ -61,7 +61,9 @@ export async function exportCompositedPng(
         ? {}
         : { backgroundColor: options.backgroundColor }),
       filter: (node) =>
-        node !== overlayHost && (options.filter?.(node) ?? true),
+        node !== overlayHost &&
+        hasRenderableSource(node) &&
+        (options.filter?.(node) ?? true),
       height,
       pixelRatio,
       width,
@@ -101,6 +103,11 @@ export async function exportCompositedPng(
   } catch (error) {
     throw pngError("Could not encode the composited PNG.", error);
   }
+}
+
+function hasRenderableSource(node: Node): boolean {
+  if (node.nodeName.toLowerCase() !== "img") return true;
+  return Boolean((node as HTMLImageElement).getAttribute("src"));
 }
 
 async function loadSvgImage(svg: SVGSVGElement): Promise<HTMLImageElement> {

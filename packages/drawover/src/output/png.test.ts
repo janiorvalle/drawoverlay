@@ -47,6 +47,7 @@ describe("composited PNG output", () => {
     const overlayHost = harness.svg.getRootNode() as ShadowRoot;
     expect(options.filter(overlayHost.host)).toBe(false);
     expect(options.filter(document.createElement("main"))).toBe(true);
+    expect(options.filter(document.createElement("img"))).toBe(false);
   });
 
   it.each([

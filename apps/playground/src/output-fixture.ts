@@ -25,9 +25,6 @@ export function installOutputFixture(api: OutputApi): void {
   const scene = createFixtureScene(submit, api.viewportRectToDocument);
   renderFixtureAnnotations(annotationSvg);
   const fixture = renderFixturePanel();
-  const page = document.querySelector<HTMLElement>(".page-shell");
-  if (!page)
-    throw new Error("The output fixture could not find the page shell.");
   const pageContext = (): PageContext => ({
     url: window.location.href,
     pathname: window.location.pathname,
@@ -56,7 +53,7 @@ export function installOutputFixture(api: OutputApi): void {
       const blob = await api.exportCompositedPng({
         annotationSvg,
         backgroundColor: "#eef1f5",
-        page,
+        page: document.body,
       });
       const previous = fixture.preview.dataset.objectUrl;
       if (previous) URL.revokeObjectURL(previous);
