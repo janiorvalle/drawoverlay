@@ -1,5 +1,4 @@
 import "./styles.css";
-import type { ElementRef } from "drawover";
 
 type FixtureName = "framework" | "hostile" | "max-z" | "normal";
 
@@ -184,24 +183,9 @@ document.querySelector("#pass-through")?.addEventListener("click", (event) => {
 });
 
 if (import.meta.env.DEV || import.meta.env.VITE_DRAWOVER === "true") {
-  void import("drawover").then(async (drawover) => {
-    drawover.init({ position: "bottom-right", theme: "auto" });
-    document
-      .querySelector("#drawover-root")
-      ?.addEventListener("drawover:element-selected", (event) => {
-        const output = document.querySelector("#targeting-output");
-        const reference = (event as CustomEvent<ElementRef>).detail;
-        if (!output) return;
-        const component = reference.component
-          ? ` | ${reference.component.framework}:${reference.component.name}`
-          : "";
-        output.textContent = `${reference.selector.primary} | ${reference.facts.tag}${component}`;
-      });
-    if (outputFixture) {
-      const { installOutputFixture } = await import("./output-fixture.js");
-      installOutputFixture(drawover);
-    }
-  });
+  void import("./drawover-dev.js").then(({ installDrawoverDev }) =>
+    installDrawoverDev({ outputFixture }),
+  );
 }
 
 function isFixtureName(value: string | null): value is FixtureName {
