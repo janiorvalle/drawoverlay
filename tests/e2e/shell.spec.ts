@@ -47,6 +47,85 @@ test("hostile host CSS does not break the shell", async ({ page }) => {
   await expect(host).toHaveCSS("z-index", "2147483647");
 });
 
+test("max-z host fixture remains below the usable Drawover chrome", async ({
+  page,
+}) => {
+  await page.goto("/?fixture=max-z");
+  const hostObstacle = page.getByTestId("max-z-hostile");
+  const host = page.locator("#drawover-root");
+  const trigger = host.locator(".trigger");
+
+  await expect(hostObstacle).toHaveCSS("z-index", "2147483647");
+  await trigger.click();
+  await expect(host.locator(".toolbar")).toBeVisible();
+});
+
+test("fixture matrix exposes stable paths and framework metadata", async ({
+  page,
+}) => {
+  await page.goto("/?fixture=framework");
+
+  await expect(page.getByTestId("expiry-date")).toBeVisible();
+  await expect(page.locator("#card-number")).toBeVisible();
+  await expect(page.locator(".fixtureControlaB12Cdef")).toBeVisible();
+  await expect(page.locator(".checkoutButton_aB12Cdef")).toBeVisible();
+  await expect(page.locator('[data-fixture="scroll-container"]')).toBeVisible();
+  const overlapFixture = page.locator('[data-fixture="overlap"]');
+  await expect(overlapFixture).toBeVisible();
+  expect(
+    await overlapFixture.evaluate((element) => {
+      const back = element
+        .querySelector(".overlap-back")
+        ?.getBoundingClientRect();
+      const front = element
+        .querySelector(".overlap-front")
+        ?.getBoundingClientRect();
+      return Boolean(
+        back &&
+        front &&
+        Math.max(back.left, front.left) < Math.min(back.right, front.right) &&
+        Math.max(back.top, front.top) < Math.min(back.bottom, front.bottom),
+      );
+    }),
+  ).toBe(true);
+
+  const metadata = await page.evaluate(() => {
+    const react = document.querySelector<HTMLElement>(
+      '[data-framework-target="react"]',
+    );
+    const vue = document.querySelector<HTMLElement>(
+      '[data-framework-target="vue"]',
+    );
+    const reactKey = Object.keys(react ?? {}).find((key) =>
+      key.startsWith("__reactFiber$"),
+    );
+
+    const fiber = reactKey
+      ? (react as unknown as Record<string, unknown>)[reactKey]
+      : null;
+    const fiberRecord = fiber as {
+      return?: { _debugSource?: { fileName?: string } };
+    } | null;
+    const vueInstance = (
+      vue as unknown as {
+        __vueParentComponent?: { type?: { __name?: string } };
+      }
+    ).__vueParentComponent;
+
+    return {
+      hasReactFiber: fiber !== null,
+      reactSource: fiberRecord?.return?._debugSource?.fileName,
+      vueName: vueInstance?.type?.__name,
+    };
+  });
+
+  expect(metadata).toEqual({
+    hasReactFiber: true,
+    reactSource: "src/components/CheckoutAction.tsx",
+    vueName: "PaymentSummary",
+  });
+});
+
 test("mobile toolbar remains inside the viewport without overlap", async ({
   page,
 }) => {

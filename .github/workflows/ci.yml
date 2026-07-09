@@ -54,7 +54,6 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - uses: ./.github/actions/setup
-      - run: pnpm --filter drawover build
       - run: pnpm test:prod-strip
 
   size:
@@ -63,19 +62,24 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - uses: ./.github/actions/setup
-      - run: pnpm --filter drawover build
       - run: pnpm size
 
   dependency-review:
     name: Dependency review
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+      - name: Review dependency changes
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
         with:
           fail-on-severity: moderate
+          fail-on-scopes: runtime, development, unknown
           warn-only: false
           allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC
+      - name: Enforce runtime dependency policy
+        run: node scripts/verify-dependencies.mjs
 
   secret-scan:
     name: Secret scan
@@ -94,5 +98,4 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - uses: ./.github/actions/setup
-      - run: pnpm --filter drawover build
       - run: pnpm test:pack

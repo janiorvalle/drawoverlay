@@ -9,6 +9,7 @@ export default tseslint.config(
       "**/.next/**",
       "**/out/**",
       "**/coverage/**",
+      ".fixture-builds/**",
       "playwright-report/**",
       "test-results/**",
     ],

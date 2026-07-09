@@ -31,6 +31,23 @@ input {
   background: #ffffff;
 }
 
+.fixture-bar {
+  display: flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 7px 20px;
+  border-bottom: 1px solid #c8ced8;
+  background: #f8fafc;
+  color: #4b5565;
+  font-size: 12px;
+}
+
+.fixture-bar a {
+  color: #174ea6;
+}
+
 .wordmark {
   color: #14213d;
   font-size: 18px;
@@ -290,6 +307,24 @@ button[type="submit"] {
   font-weight: 800;
 }
 
+.delivery-options {
+  display: grid;
+  margin-top: 18px;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.delivery-option {
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 1px solid #aeb6c4;
+  border-radius: 5px;
+  background: #ffffff;
+  color: #273244;
+  cursor: pointer;
+  font-weight: 700;
+}
+
 .summary h2 {
   margin-bottom: 22px;
 }
@@ -318,10 +353,19 @@ button[type="submit"] {
 .host-max-z {
   position: fixed;
   z-index: 2147483647;
-  top: 0;
-  left: 0;
-  width: 1px;
-  height: 1px;
+  right: 0;
+  bottom: 0;
+  display: grid;
+  width: 132px;
+  height: 104px;
+  place-items: center;
+  padding: 12px;
+  border: 3px solid #8b3d61;
+  background: #ffe5ef;
+  color: #6f2148;
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
 }
 
 .output-fixture {
@@ -400,6 +444,13 @@ button[type="submit"] {
     gap: 10px;
   }
 
+  .fixture-bar {
+    overflow-x: auto;
+    justify-content: flex-start;
+    gap: 12px;
+    white-space: nowrap;
+  }
+
   .page-shell {
     width: min(100% - 24px, 560px);
     margin: 24px auto 96px;
@@ -427,6 +478,10 @@ button[type="submit"] {
   }
 
   .field-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .delivery-options {
     grid-template-columns: 1fr;
   }
 }

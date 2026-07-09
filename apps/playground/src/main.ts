@@ -1,34 +1,55 @@
 import "./styles.css";
 import type { ElementRef } from "drawover";
 
-const hostile = new URLSearchParams(window.location.search).has("hostile");
-const outputFixture = new URLSearchParams(window.location.search).has(
-  "output-fixture",
-);
+type FixtureName = "framework" | "hostile" | "max-z" | "normal";
 
-if (hostile) {
+const search = new URLSearchParams(window.location.search);
+const requestedFixture = search.get("fixture");
+const fixture: FixtureName = search.has("hostile")
+  ? "hostile"
+  : isFixtureName(requestedFixture)
+    ? requestedFixture
+    : "normal";
+const outputFixture = search.has("output-fixture");
+
+document.body.dataset.fixture = fixture;
+
+if (fixture === "hostile") {
   const style = document.createElement("style");
   style.dataset.hostileFixture = "true";
   style.textContent = `
-    body *:not(#drawover-root) {
+    html body #app, html body #app * {
       all: unset !important;
       box-sizing: border-box !important;
+      font: 11px monospace !important;
+    }
+
+    html body {
+      display: block !important;
+      min-height: 100vh !important;
+      background: #fff3cd !important;
     }
   `;
   document.head.append(style);
 }
 
 const app = document.querySelector<HTMLElement>("#app");
-
 if (!app) throw new Error("Playground root was not found.");
 
 app.innerHTML = `
   <header class="site-header">
-    <a class="wordmark" href="/">Northstar Shop</a>
+    <a class="wordmark" href="/?fixture=${fixture}">Northstar Shop</a>
     <nav aria-label="Checkout progress">
       <span>Cart</span><span class="active">Payment</span><span>Done</span>
     </nav>
   </header>
+  <div class="fixture-bar" data-testid="fixture-bar">
+    <strong>Fixture: ${fixture}</strong>
+    <a href="/?fixture=normal">Normal</a>
+    <a href="/?fixture=hostile">Hostile CSS</a>
+    <a href="/?fixture=max-z">Max z-index</a>
+    <a href="/?fixture=framework">Framework metadata</a>
+  </div>
   <div class="page-shell">
     <section class="checkout-panel" aria-labelledby="checkout-title">
       <div class="heading-row">
@@ -50,6 +71,10 @@ app.innerHTML = `
             <label for="security-code">Security code</label>
             <input id="security-code" data-testid="security-code" name="securityCode" type="text" value="123" />
           </div>
+        </div>
+        <div class="delivery-options" data-fixture="stable-path">
+          <button class="delivery-option" type="button">Standard delivery</button>
+          <button class="delivery-option" type="button">Express delivery</button>
         </div>
         <label class="check-row">
           <input type="checkbox" checked />
@@ -79,34 +104,38 @@ app.innerHTML = `
         <h3>Preferred selectors</h3>
         <button type="button" data-testid="fixture-testid">data-testid target</button>
         <button type="button" id="fixture-id">id target</button>
-        <div class="stable-region"><button type="button" class="stable-action">stable path target</button></div>
+        <div class="stable-region"><button type="button" class="stable-action fixtureControlaB12Cdef checkoutButton_aB12Cdef">stable path target</button></div>
         <div class="hash-region"><button type="button" class="css-1a2B3c styles_button__x7H2p">hashed class target</button></div>
       </article>
       <article class="fixture-card">
         <h3>Nesting and overlap</h3>
         <button type="button" class="nested-action"><span class="nested-label">nested label target</span></button>
-        <div class="overlap-fixture" aria-label="Overlapping targets">
+        <div class="overlap-fixture" data-fixture="overlap" aria-label="Overlapping targets">
           <div class="overlap-back">back target</div>
           <div class="overlap-front">front target</div>
         </div>
       </article>
       <article class="fixture-card">
         <h3>Scrolled container</h3>
-        <div class="scroll-fixture" tabindex="0">
+        <div class="scroll-fixture" data-fixture="scroll-container" tabindex="0">
           <p>Scroll this panel</p>
           <div class="scroll-spacer"></div>
-          <button type="button" class="scrolled-action">scrolled target</button>
+          <button type="button" class="scrolled-action" data-fixture="scrolled-target">scrolled target</button>
         </div>
       </article>
       <article class="fixture-card">
         <h3>Framework metadata</h3>
-        <button type="button" id="react-fixture">React fiber target</button>
-        <button type="button" id="vue-fixture">Vue component target</button>
+        <button type="button" id="react-fixture" data-framework-target="react">React fiber target</button>
+        <button type="button" id="vue-fixture" data-framework-target="vue">Vue component target</button>
         <button type="button" id="pass-through">Host click count: <span>0</span></button>
       </article>
     </div>
   </section>
-  <div class="host-max-z" aria-hidden="true"></div>
+  ${
+    fixture === "max-z"
+      ? '<div class="host-max-z" data-testid="max-z-hostile">Host app at max z-index</div>'
+      : ""
+  }
 `;
 
 document.querySelector("form")?.addEventListener("submit", (event) => {
@@ -119,6 +148,8 @@ if (reactFixture) {
     return null;
   }
   Object.defineProperty(reactFixture, "__reactFiber$fixture", {
+    configurable: true,
+    enumerable: true,
     value: {
       type: "button",
       return: {
@@ -136,6 +167,8 @@ if (reactFixture) {
 const vueFixture = document.querySelector("#vue-fixture");
 if (vueFixture) {
   Object.defineProperty(vueFixture, "__vueParentComponent", {
+    configurable: true,
+    enumerable: true,
     value: {
       type: {
         __name: "PaymentSummary",
@@ -169,4 +202,8 @@ if (import.meta.env.DEV || import.meta.env.VITE_DRAWOVER === "true") {
       installOutputFixture(drawover);
     }
   });
+}
+
+function isFixtureName(value: string | null): value is FixtureName {
+  return ["framework", "hostile", "max-z", "normal"].includes(value ?? "");
 }
