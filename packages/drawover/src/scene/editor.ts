@@ -131,7 +131,8 @@ export class SceneEditor {
   readonly #onViewportChangeBound = (): void => this.#render();
   readonly #onToolbarPointerDownBound = (event: PointerEvent): void => {
     const target = event.target instanceof Element ? event.target : undefined;
-    if (target?.closest("button.close")) this.#cancelInlineEditor?.();
+    if (target?.closest('button.close, button[aria-label="Clear annotations"]'))
+      this.#cancelInlineEditor?.();
   };
   readonly #shellVisibilityObserver: MutationObserver;
   readonly #onClearBound = (): void => {
@@ -634,8 +635,10 @@ export class SceneEditor {
       case "marquee": {
         const selected = this.#store
           .getSnapshot()
-          .annotations.filter((annotation) =>
-            intersects(visualBounds(annotation), session.current),
+          .annotations.filter(
+            (annotation) =>
+              annotation.type !== "note" &&
+              intersects(visualBounds(annotation), session.current),
           )
           .map(({ id }) => id);
         if (!session.additive) this.#selectedIds.clear();
@@ -1092,7 +1095,10 @@ export class SceneEditor {
 
   #pruneSelection(): void {
     const ids = new Set(
-      this.#store.getSnapshot().annotations.map(({ id }) => id),
+      this.#store
+        .getSnapshot()
+        .annotations.filter(({ type }) => type !== "note")
+        .map(({ id }) => id),
     );
     this.#selectedIds = new Set(
       [...this.#selectedIds].filter((id) => ids.has(id)),
@@ -1102,12 +1108,16 @@ export class SceneEditor {
   #render(): void {
     if (this.#destroyed) return;
     const snapshot = this.#store.getSnapshot();
+    const sceneSnapshot = {
+      ...snapshot,
+      annotations: snapshot.annotations.filter(({ type }) => type !== "note"),
+    };
     if (this.#toolbar.hidden) {
       this.#renderer.render(
-        { ...snapshot, annotations: [] },
+        { ...sceneSnapshot, annotations: [] },
         { selectedIds: new Set() },
       );
-      this.#updateControls(snapshot.annotations.length);
+      this.#updateControls(sceneSnapshot.annotations.length);
       return;
     }
     const session = this.#session;
@@ -1129,14 +1139,14 @@ export class SceneEditor {
       overrides.set(session.original.id, session.draft);
     }
     if (session?.kind === "marquee") marquee = session.current;
-    this.#renderer.render(snapshot, {
+    this.#renderer.render(sceneSnapshot, {
       selectedIds:
         this.#tool === "select" ? this.#selectedIds : new Set<string>(),
       overrides,
       previews,
       ...(marquee ? { marquee } : {}),
     });
-    this.#updateControls(snapshot.annotations.length);
+    this.#updateControls(sceneSnapshot.annotations.length);
   }
 
   #updateControls(annotationCount: number): void {

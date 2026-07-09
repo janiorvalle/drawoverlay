@@ -84,7 +84,9 @@ test("creates and transforms rectangles, arrows, and text", async ({
   await expect(scene.locator("[data-annotation-id]")).toHaveCount(3);
 });
 
-test("closing from the toolbar cancels inline text entry", async ({ page }) => {
+test("closing or clearing from the toolbar cancels inline text entry", async ({
+  page,
+}) => {
   const host = page.locator("#drawover-root");
   const scene = host.locator('[data-layer="scene"]');
   await tool(host, "text").click();
@@ -95,6 +97,14 @@ test("closing from the toolbar cancels inline text entry", async ({ page }) => {
   await host.getByRole("button", { name: "Close Drawover" }).click();
   await expect(editor).toHaveCount(0);
   await host.locator(".trigger").click();
+  await expect(scene.locator('[data-annotation-type="text"]')).toHaveCount(0);
+
+  await tool(host, "text").click();
+  await page.mouse.click(120, 140);
+  const clearDraft = host.getByRole("textbox", { name: "Annotation text" });
+  await clearDraft.fill("Another uncommitted draft");
+  await host.getByRole("button", { name: "Clear annotations" }).click();
+  await expect(clearDraft).toHaveCount(0);
   await expect(scene.locator('[data-annotation-type="text"]')).toHaveCount(0);
 });
 

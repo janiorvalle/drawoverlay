@@ -678,6 +678,46 @@ describe("scene interactions", () => {
       "1 items / 1 selected",
     );
   });
+
+  it("keeps general notes outside scene rendering and selection", () => {
+    instance = init();
+    instance.open();
+    const shadow = document.getElementById(DRAWOVER_HOST_ID)?.shadowRoot;
+    const svg = shadow?.querySelector<SVGSVGElement>('[data-layer="scene"]');
+    shadow
+      ?.querySelector<HTMLButtonElement>('[aria-label="Open general notes"]')
+      ?.click();
+    const draft = shadow?.querySelector<HTMLTextAreaElement>(
+      '[aria-label="New general note"]',
+    );
+    const form = shadow?.querySelector<HTMLFormElement>(".note-form");
+    if (!draft || !form) throw new Error("General note form was not found.");
+    draft.value = "Keep me in the notes panel";
+    form.dispatchEvent(
+      new Event("submit", { bubbles: true, cancelable: true }),
+    );
+    shadow
+      ?.querySelector<HTMLButtonElement>('[aria-label="Close general notes"]')
+      ?.click();
+    shadow
+      ?.querySelector<HTMLButtonElement>('button[data-mode="scene"]')
+      ?.click();
+    draw(svg, { x: -10, y: -10 }, { x: 20, y: 20 }, 32);
+
+    expect(shadow?.querySelector(".scene-status")?.textContent).toBe(
+      "0 items / 0 selected",
+    );
+    expect(svg?.querySelector('[data-annotation-type="note"]')).toBeNull();
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Delete" }));
+    shadow
+      ?.querySelector<HTMLButtonElement>('[aria-label="Open general notes"]')
+      ?.click();
+    expect(
+      shadow?.querySelector<HTMLTextAreaElement>(
+        '[aria-label="Edit general note"]',
+      )?.value,
+    ).toBe("Keep me in the notes panel");
+  });
 });
 
 interface PointerOptions {
