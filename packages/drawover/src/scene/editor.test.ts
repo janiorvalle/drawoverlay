@@ -7,6 +7,7 @@ let instance: DrawoverInstance | undefined;
 afterEach(() => {
   instance?.destroy();
   instance = undefined;
+  vi.restoreAllMocks();
   localStorage.clear();
   Object.defineProperty(window, "innerWidth", {
     configurable: true,
@@ -144,6 +145,83 @@ describe("scene interactions", () => {
     expect(shadow?.querySelector(".inline-editor")).toBeNull();
   });
 
+  it("cancels inline text entry when the shell closes", async () => {
+    instance = init();
+    instance.open();
+    const shadow = document.getElementById(DRAWOVER_HOST_ID)?.shadowRoot;
+    const svg = shadow?.querySelector<SVGSVGElement>('[data-layer="scene"]');
+    shadow
+      ?.querySelector<HTMLButtonElement>('button[data-mode="scene"]')
+      ?.click();
+    shadow
+      ?.querySelector<HTMLButtonElement>('button[data-tool="text"]')
+      ?.click();
+    svg?.dispatchEvent(pointer("pointerdown", 100, 100, { pointerId: 26 }));
+    expect(shadow?.querySelector(".inline-editor")).not.toBeNull();
+
+    instance.close();
+    await vi.waitFor(() => {
+      expect(shadow?.querySelector(".inline-editor")).toBeNull();
+    });
+    instance.open();
+    await vi.waitFor(() => {
+      expect(
+        svg?.querySelectorAll('[data-annotation-type="text"]'),
+      ).toHaveLength(0);
+    });
+  });
+
+  it("allows an existing rectangle label to be cleared", () => {
+    instance = init();
+    instance.open();
+    const shadow = document.getElementById(DRAWOVER_HOST_ID)?.shadowRoot;
+    const svg = shadow?.querySelector<SVGSVGElement>('[data-layer="scene"]');
+    shadow
+      ?.querySelector<HTMLButtonElement>('button[data-mode="scene"]')
+      ?.click();
+    shadow
+      ?.querySelector<HTMLButtonElement>('button[data-tool="rect"]')
+      ?.click();
+    draw(svg, { x: 80, y: 100 }, { x: 240, y: 190 }, 27);
+    shadow
+      ?.querySelector<HTMLButtonElement>('button[data-tool="select"]')
+      ?.click();
+    let rectangle = svg?.querySelector<SVGGElement>(
+      '[data-annotation-type="rect"]',
+    );
+    rectangle?.dispatchEvent(
+      new MouseEvent("dblclick", {
+        bubbles: true,
+        clientX: 120,
+        clientY: 130,
+      }),
+    );
+    let editor = shadow?.querySelector<HTMLInputElement>(".inline-editor");
+    if (!editor) throw new Error("Rectangle label editor was not created.");
+    editor.value = "Header";
+    editor.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
+    rectangle = svg?.querySelector<SVGGElement>(
+      '[data-annotation-type="rect"]',
+    );
+    expect(rectangle?.querySelector("text")?.textContent).toBe("Header");
+
+    rectangle?.dispatchEvent(
+      new MouseEvent("dblclick", {
+        bubbles: true,
+        clientX: 120,
+        clientY: 130,
+      }),
+    );
+    editor = shadow?.querySelector<HTMLInputElement>(".inline-editor");
+    if (!editor) throw new Error("Rectangle label editor was not reopened.");
+    editor.value = "";
+    editor.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
+    rectangle = svg?.querySelector<SVGGElement>(
+      '[data-annotation-type="rect"]',
+    );
+    expect(rectangle?.querySelector("text")).toBeNull();
+  });
+
   it("leaves shortcuts inside a closed host shadow root untouched", () => {
     instance = init();
     instance.open();
@@ -168,13 +246,72 @@ describe("scene interactions", () => {
       key: "Delete",
     });
     externalInput.dispatchEvent(deleteEvent);
+    const pasteEvent = new Event("paste", {
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+    }) as ClipboardEvent;
+    Object.defineProperty(pasteEvent, "clipboardData", {
+      value: {
+        files: [new File(["image"], "external.png", { type: "image/png" })],
+      },
+    });
+    externalInput.dispatchEvent(pasteEvent);
 
     expect(document.activeElement).toBe(externalHost);
     expect(deleteEvent.defaultPrevented).toBe(false);
+    expect(pasteEvent.defaultPrevented).toBe(false);
     expect(svg?.querySelectorAll('[data-annotation-type="rect"]')).toHaveLength(
       1,
     );
     externalHost.remove();
+  });
+
+  it("discards a pending image import when the scene is cleared", async () => {
+    instance = init();
+    instance.open();
+    const shadow = document.getElementById(DRAWOVER_HOST_ID)?.shadowRoot;
+    const svg = shadow?.querySelector<SVGSVGElement>('[data-layer="scene"]');
+    shadow
+      ?.querySelector<HTMLButtonElement>('button[data-mode="scene"]')
+      ?.click();
+    let pendingReader: FileReader | undefined;
+    const captureReader = (reader: FileReader): void => {
+      pendingReader = reader;
+    };
+    vi.spyOn(FileReader.prototype, "readAsDataURL").mockImplementation(
+      function (this: FileReader) {
+        captureReader(this);
+      },
+    );
+    const pasteEvent = new Event("paste", {
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+    }) as ClipboardEvent;
+    Object.defineProperty(pasteEvent, "clipboardData", {
+      value: {
+        files: [new File(["image"], "slow.png", { type: "image/png" })],
+      },
+    });
+    document.dispatchEvent(pasteEvent);
+    expect(pasteEvent.defaultPrevented).toBe(true);
+    expect(pendingReader).toBeDefined();
+
+    instance.clear();
+    Object.defineProperty(pendingReader, "result", {
+      configurable: true,
+      value: "data:image/png;base64,AA==",
+    });
+    pendingReader?.onload?.(
+      new ProgressEvent("load") as ProgressEvent<FileReader>,
+    );
+
+    await vi.waitFor(() => {
+      expect(
+        svg?.querySelectorAll('[data-annotation-type="image"]'),
+      ).toHaveLength(0);
+    });
   });
 
   it("labels, resizes, rotates, and edits arrow endpoints", () => {

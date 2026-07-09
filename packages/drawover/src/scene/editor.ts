@@ -131,6 +131,7 @@ export class SceneEditor {
   readonly #onViewportChangeBound = (): void => this.#render();
   readonly #shellVisibilityObserver: MutationObserver;
   readonly #onClearBound = (): void => {
+    this.#invalidateImageImports();
     this.#store.clear("Clear scene");
     this.#selectedIds.clear();
     this.#render();
@@ -142,6 +143,8 @@ export class SceneEditor {
   #selectedIds = new Set<string>();
   #session: PointerSession | undefined;
   #inlineEditor: HTMLInputElement | undefined;
+  #cancelInlineEditor: (() => void) | undefined;
+  #imageImportGeneration = 0;
   #lastAnnotationClick: { id: string; at: number } | undefined;
   #suppressDoubleClickUntil = 0;
   #destroyed = false;
@@ -200,7 +203,10 @@ export class SceneEditor {
     });
     window.addEventListener("resize", this.#onViewportChangeBound);
     this.#shellVisibilityObserver = new MutationObserver(() => {
-      if (this.#toolbar.hidden) this.#cancelActivePointerSession();
+      if (this.#toolbar.hidden) {
+        this.#cancelActivePointerSession();
+        this.#cancelInlineEditor?.();
+      }
       this.#render();
     });
     this.#shellVisibilityObserver.observe(this.#sceneLayer, {
@@ -224,6 +230,8 @@ export class SceneEditor {
   destroy(): void {
     if (this.#destroyed) return;
     this.#destroyed = true;
+    this.#invalidateImageImports();
+    this.#cancelInlineEditor?.();
     this.#unsubscribe();
     this.#sceneLayer.removeEventListener(
       "pointerdown",
@@ -248,7 +256,6 @@ export class SceneEditor {
       "drawover:clear-request",
       this.#onClearBound,
     );
-    this.#inlineEditor?.remove();
     this.#toolGroup.remove();
     this.#historyGroup.remove();
     this.#zGroup.remove();
@@ -296,11 +303,11 @@ export class SceneEditor {
     const undo = createButton("<", "Undo");
     undo.dataset.command = "undo";
     undo.title = "Undo";
-    undo.addEventListener("click", () => this.#store.undo());
+    undo.addEventListener("click", () => this.#undo());
     const redo = createButton(">", "Redo");
     redo.dataset.command = "redo";
     redo.title = "Redo";
-    redo.addEventListener("click", () => this.#store.redo());
+    redo.addEventListener("click", () => this.#redo());
     group.append(undo, redo);
     return group;
   }
@@ -671,6 +678,24 @@ export class SceneEditor {
     if (session) this.#cancelPointerSession(session.pointerId);
   }
 
+  #undo(): void {
+    this.#invalidateImageImports();
+    this.#store.undo();
+  }
+
+  #redo(): void {
+    this.#invalidateImageImports();
+    this.#store.redo();
+  }
+
+  #invalidateImageImports(): void {
+    this.#imageImportGeneration += 1;
+  }
+
+  #isImageImportCurrent(generation: number): boolean {
+    return !this.#destroyed && generation === this.#imageImportGeneration;
+  }
+
   #onDoubleClick(event: MouseEvent): void {
     if (
       !this.#isSceneActive() ||
@@ -730,25 +755,35 @@ export class SceneEditor {
       finished = true;
       const value = input.value.trim();
       input.remove();
-      if (this.#inlineEditor === input) this.#inlineEditor = undefined;
-      if (!commit || value.length === 0) {
+      if (this.#inlineEditor === input) {
+        this.#inlineEditor = undefined;
+        this.#cancelInlineEditor = undefined;
+      }
+      if (!commit) {
         if (!annotation) this.#setTool("select");
         return;
       }
       if (annotation?.type === "rect") {
         this.#store.update(
           annotation.id,
-          (current) =>
-            current.type === "rect"
-              ? {
-                  ...current,
-                  label: value,
-                  labelAlign: current.labelAlign ?? "center",
-                }
-              : current,
+          (current) => {
+            if (current.type !== "rect") return current;
+            if (value.length === 0) {
+              const updated = { ...current };
+              delete updated.label;
+              delete updated.labelAlign;
+              return updated;
+            }
+            return {
+              ...current,
+              label: value,
+              labelAlign: current.labelAlign ?? "center",
+            };
+          },
           "Label rectangle",
         );
       } else if (annotation?.type === "text") {
+        if (value.length === 0) return;
         this.#store.update(
           annotation.id,
           (current) =>
@@ -765,6 +800,10 @@ export class SceneEditor {
           "Edit text",
         );
       } else {
+        if (value.length === 0) {
+          this.#setTool("select");
+          return;
+        }
         const created = this.#newText(documentPoint, value);
         this.#store.create(created, "Create text");
         this.#selectedIds = new Set([created.id]);
@@ -772,6 +811,7 @@ export class SceneEditor {
       }
       this.#render();
     };
+    this.#cancelInlineEditor = () => finish(false);
     input.addEventListener("keydown", (inputEvent) => {
       if (inputEvent.key === "Enter") {
         inputEvent.preventDefault();
@@ -800,14 +840,14 @@ export class SceneEditor {
     if (modifier && key === "z") {
       event.preventDefault();
       this.#cancelActivePointerSession();
-      if (event.shiftKey) this.#store.redo();
-      else this.#store.undo();
+      if (event.shiftKey) this.#redo();
+      else this.#undo();
       return;
     }
     if (modifier && key === "y") {
       event.preventDefault();
       this.#cancelActivePointerSession();
-      this.#store.redo();
+      this.#redo();
       return;
     }
     if (modifier && key === "d") {
@@ -862,7 +902,14 @@ export class SceneEditor {
   }
 
   async #onPaste(event: ClipboardEvent): Promise<void> {
-    if (!this.#isSceneActive()) return;
+    if (
+      !this.#isSceneActive() ||
+      event.defaultPrevented ||
+      event.composedPath().some(isTextEntry) ||
+      isTextEntry(this.#shadow.activeElement) ||
+      hasExternalFocus(this.#host)
+    )
+      return;
     const file = [...(event.clipboardData?.files ?? [])].find(({ type }) =>
       type.startsWith("image/"),
     );
@@ -873,8 +920,11 @@ export class SceneEditor {
 
   async #insertImage(file: File): Promise<void> {
     if (!file.type.startsWith("image/")) return;
+    const generation = this.#imageImportGeneration;
     const dataUrl = await readDataUrl(file);
+    if (!this.#isImageImportCurrent(generation)) return;
     const dimensions = await readImageDimensions(dataUrl);
+    if (!this.#isImageImportCurrent(generation)) return;
     const width = Math.min(320, Math.max(80, dimensions.width));
     const height = Math.max(60, width * (dimensions.height / dimensions.width));
     const center = viewportToDocument({
