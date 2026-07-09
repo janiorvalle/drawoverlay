@@ -1,0 +1,11 @@
+title = "drawover gitleaks configuration"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Public documentation placeholders"
+regexTarget = "match"
+regexes = [
+  '''example\.com''',
+]

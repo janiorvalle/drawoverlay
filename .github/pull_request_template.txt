@@ -1,0 +1,16 @@
+## Summary
+
+- What changed:
+- Why:
+
+## Verification
+
+- [ ] `pnpm verify` passes locally
+- [ ] UI changes were checked in the playground at desktop and mobile widths
+- [ ] No runtime dependency was added without approval
+- [ ] No secret, environment file, private URL, or personal path is included
+- [ ] Package contents were reviewed
+
+## Contract impact
+
+None, or link the approved contract change.
