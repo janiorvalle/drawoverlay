@@ -59,6 +59,128 @@ nav .active {
   align-items: start;
 }
 
+.targeting-lab {
+  width: min(1040px, calc(100% - 40px));
+  margin: 0 auto 120px;
+  padding-top: 32px;
+  border-top: 1px solid #cbd2dc;
+}
+
+.targeting-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 20px;
+}
+
+#targeting-output {
+  max-width: 52%;
+  padding: 8px 10px;
+  border: 1px solid #abb5c4;
+  border-radius: 5px;
+  background: #ffffff;
+  color: #344054;
+  font:
+    12px/1.4 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+  overflow-wrap: anywhere;
+}
+
+.fixture-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.fixture-card {
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid #d7dce4;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.fixture-card h3 {
+  margin: 0 0 14px;
+  font-size: 15px;
+}
+
+.fixture-card button {
+  min-height: 38px;
+  margin: 4px;
+  padding: 0 10px;
+  border: 1px solid #9ca7b8;
+  border-radius: 5px;
+  background: #f8fafc;
+  color: #27364a;
+  cursor: pointer;
+}
+
+.stable-region,
+.hash-region {
+  display: inline-block;
+}
+
+.nested-label {
+  display: inline-block;
+  padding: 4px 6px;
+  background: #dff4ed;
+}
+
+.overlap-fixture {
+  position: relative;
+  height: 112px;
+  margin-top: 14px;
+}
+
+.overlap-back,
+.overlap-front {
+  position: absolute;
+  display: grid;
+  width: 150px;
+  height: 70px;
+  place-items: center;
+  border: 2px solid #607089;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.overlap-back {
+  top: 0;
+  left: 0;
+  background: #e8edf5;
+}
+
+.overlap-front {
+  right: 8px;
+  bottom: 0;
+  border-color: #8b3d61;
+  background: #f5dce8;
+}
+
+.scroll-fixture {
+  height: 150px;
+  overflow: auto;
+  padding: 12px;
+  border: 1px solid #aeb6c4;
+  border-radius: 5px;
+  background: #f7f9fc;
+}
+
+.scroll-fixture p {
+  margin: 0;
+  color: #667085;
+  font-size: 12px;
+}
+
+.scroll-spacer {
+  height: 180px;
+}
+
 .checkout-panel,
 .summary {
   border: 1px solid #d7dce4;
@@ -214,6 +336,22 @@ button[type="submit"] {
   .page-shell {
     width: min(100% - 24px, 560px);
     margin: 24px auto 96px;
+    grid-template-columns: 1fr;
+  }
+
+  .targeting-lab {
+    width: min(100% - 24px, 560px);
+  }
+
+  .targeting-heading {
+    display: grid;
+  }
+
+  #targeting-output {
+    max-width: 100%;
+  }
+
+  .fixture-grid {
     grid-template-columns: 1fr;
   }
 
