@@ -1,0 +1,7 @@
+dist
+.next
+out
+coverage
+playwright-report
+test-results
+pnpm-lock.yaml

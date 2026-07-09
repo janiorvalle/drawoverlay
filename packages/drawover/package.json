@@ -1,0 +1,37 @@
+{
+  "name": "drawover",
+  "version": "0.0.1",
+  "description": "A development overlay for precise UI review",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./contracts": {
+      "types": "./dist/contracts/index.d.ts",
+      "import": "./dist/contracts/index.js"
+    },
+    "./coordinates": {
+      "types": "./dist/coordinates.d.ts",
+      "import": "./dist/coordinates.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src",
+    "test": "vitest run src"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

@@ -13,6 +13,7 @@ reviews/
 node_modules/
 dist/
 .next/
+out/
 coverage/
 playwright-report/
 test-results/
