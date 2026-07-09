@@ -3,6 +3,8 @@ import {
   type DrawoverInstance,
   type DrawoverOptions,
 } from "./shell/shell.js";
+import { bindScenePersistence } from "./persistence/persistence.js";
+import { createSceneStore } from "./scene/store.js";
 
 export type {
   Annotation,
@@ -33,9 +35,16 @@ let activeInstance: DrawoverInstance | undefined;
 export function init(options: DrawoverOptions = {}): DrawoverInstance {
   if (activeInstance) return activeInstance;
 
+  const store = createSceneStore();
+  const persistence = bindScenePersistence(store, {
+    ...(options.storageKey ? { storageKey: options.storageKey } : {}),
+  });
   activeInstance = createShell({
     ...options,
+    sceneStore: store,
+    onClear: () => persistence.clear(),
     onDestroy: () => {
+      persistence.destroy();
       activeInstance = undefined;
     },
   });
