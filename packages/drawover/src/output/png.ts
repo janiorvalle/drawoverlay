@@ -46,12 +46,15 @@ export async function exportCompositedPng(
   const height = Math.max(page.scrollHeight, page.clientHeight, 1);
   const pageBounds = viewportRectToDocument(page.getBoundingClientRect());
   const scroll = getScrollOffset();
+  const svgBounds = options.annotationSvg.getBoundingClientRect();
   const root = options.annotationSvg.getRootNode();
   const overlayHost = root instanceof ShadowRoot ? root.host : undefined;
   const exportSvg = createExportSvg(options.annotationSvg, {
     height,
-    offsetX: scroll.x - pageBounds.x,
-    offsetY: scroll.y - pageBounds.y,
+    offsetX: svgBounds.left + scroll.x - pageBounds.x,
+    offsetY: svgBounds.top + scroll.y - pageBounds.y,
+    sourceHeight: svgBounds.height,
+    sourceWidth: svgBounds.width,
     width,
   });
 
@@ -135,13 +138,24 @@ function createExportSvg(
     height: number;
     offsetX: number;
     offsetY: number;
+    sourceHeight: number;
+    sourceWidth: number;
     width: number;
   },
 ): SVGSVGElement {
-  const clone = svg.cloneNode(true) as SVGSVGElement;
-  for (const element of clone.querySelectorAll('[data-scene-ui="true"]')) {
+  const source = svg.cloneNode(true) as SVGSVGElement;
+  for (const element of source.querySelectorAll('[data-scene-ui="true"]')) {
     element.remove();
   }
+  source.dataset.exportSource = "true";
+  source.setAttribute("x", "0");
+  source.setAttribute("y", "0");
+  source.setAttribute("width", String(Math.max(options.sourceWidth, 1)));
+  source.setAttribute("height", String(Math.max(options.sourceHeight, 1)));
+  const exported = document.createElementNS(
+    "http://www.w3.org/2000/svg",
+    "svg",
+  );
   const translated = document.createElementNS(
     "http://www.w3.org/2000/svg",
     "g",
@@ -151,17 +165,17 @@ function createExportSvg(
     "transform",
     `translate(${String(options.offsetX)} ${String(options.offsetY)})`,
   );
-  translated.append(...clone.children);
-  clone.append(translated);
-  clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-  clone.setAttribute("width", String(Math.max(options.width, 1)));
-  clone.setAttribute("height", String(Math.max(options.height, 1)));
-  clone.setAttribute(
+  translated.append(source);
+  exported.append(translated);
+  exported.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+  exported.setAttribute("width", String(Math.max(options.width, 1)));
+  exported.setAttribute("height", String(Math.max(options.height, 1)));
+  exported.setAttribute(
     "viewBox",
     `0 0 ${String(Math.max(options.width, 1))} ${String(Math.max(options.height, 1))}`,
   );
-  clone.setAttribute("preserveAspectRatio", "none");
-  return clone;
+  exported.setAttribute("preserveAspectRatio", "none");
+  return exported;
 }
 
 async function encodePng(canvas: HTMLCanvasElement): Promise<Blob> {

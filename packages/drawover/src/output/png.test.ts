@@ -75,7 +75,7 @@ describe("composited PNG output", () => {
       exported
         ?.querySelector('[data-export-scene="true"]')
         ?.getAttribute("transform"),
-    ).toBe("translate(0 0)");
+    ).toBe("translate(10 10)");
   });
 
   it("removes selection chrome from the standalone annotation SVG", async () => {
@@ -112,7 +112,12 @@ describe("composited PNG output", () => {
       exported
         ?.querySelector('[data-export-scene="true"]')
         ?.getAttribute("transform"),
-    ).toBe("translate(0 0)");
+    ).toBe("translate(10 10)");
+    expect(
+      exported
+        ?.querySelector('svg[data-export-source="true"]')
+        ?.getAttribute("viewBox"),
+    ).toBe("0 0 180 80");
   });
 
   it("translates viewport-rendered annotations into a full-page SVG", async () => {
@@ -148,7 +153,7 @@ describe("composited PNG output", () => {
       exported
         ?.querySelector('[data-export-scene="true"]')
         ?.getAttribute("transform"),
-    ).toBe("translate(0 400)");
+    ).toBe("translate(10 410)");
   });
 
   it("excludes the Shadow DOM overlay host from the page capture", async () => {

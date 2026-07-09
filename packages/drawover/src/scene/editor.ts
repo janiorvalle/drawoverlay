@@ -1019,13 +1019,20 @@ export class SceneEditor {
 
   #reorder(action: ZOrderAction): void {
     if (this.#selectedIds.size === 0) return;
+    const snapshot = this.#store.getSnapshot();
     const reordered = reorderAnnotations(
-      this.#store.getSnapshot().annotations,
+      snapshot.annotations.filter(({ type }) => type !== "note"),
       this.#selectedIds,
       action,
     );
+    const reorderedById = new Map(
+      reordered.map((annotation) => [annotation.id, annotation] as const),
+    );
+    const merged = snapshot.annotations.map(
+      (annotation) => reorderedById.get(annotation.id) ?? annotation,
+    );
     this.#store.transaction(`Z-order ${action}`, (transaction) =>
-      transaction.replaceAll(reordered),
+      transaction.replaceAll(merged),
     );
   }
 

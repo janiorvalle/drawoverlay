@@ -729,6 +729,62 @@ describe("scene interactions", () => {
       )?.value,
     ).toBe("Keep me in the notes panel");
   });
+
+  it("reorders scene annotations without invisible note steps", () => {
+    instance = init();
+    instance.open();
+    const shadow = document.getElementById(DRAWOVER_HOST_ID)?.shadowRoot;
+    const svg = shadow?.querySelector<SVGSVGElement>('[data-layer="scene"]');
+    shadow
+      ?.querySelector<HTMLButtonElement>('button[data-mode="scene"]')
+      ?.click();
+    shadow
+      ?.querySelector<HTMLButtonElement>('button[data-tool="rect"]')
+      ?.click();
+    draw(svg, { x: 40, y: 70 }, { x: 110, y: 120 }, 33);
+
+    shadow
+      ?.querySelector<HTMLButtonElement>('[aria-label="Open general notes"]')
+      ?.click();
+    const draft = shadow?.querySelector<HTMLTextAreaElement>(
+      '[aria-label="New general note"]',
+    );
+    const form = shadow?.querySelector<HTMLFormElement>(".note-form");
+    if (!draft || !form) throw new Error("General note form was not found.");
+    draft.value = "Between the drawings";
+    form.dispatchEvent(
+      new Event("submit", { bubbles: true, cancelable: true }),
+    );
+    shadow
+      ?.querySelector<HTMLButtonElement>('[aria-label="Close general notes"]')
+      ?.click();
+    draft.blur();
+    draw(svg, { x: 140, y: 80 }, { x: 210, y: 130 }, 34);
+
+    shadow
+      ?.querySelector<HTMLButtonElement>('button[data-tool="select"]')
+      ?.click();
+    const first = svg?.querySelector<SVGGElement>(
+      '[data-annotation-type="rect"]',
+    );
+    const firstId = first?.dataset.annotationId;
+    first?.dispatchEvent(pointer("pointerdown", 70, 90, { pointerId: 35 }));
+    svg?.dispatchEvent(pointer("pointerup", 70, 90, { pointerId: 35 }));
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "]" }));
+
+    expect(
+      svg?.querySelectorAll<SVGGElement>("[data-annotation-id]")[1]?.dataset
+        .annotationId,
+    ).toBe(firstId);
+    shadow
+      ?.querySelector<HTMLButtonElement>('[aria-label="Open general notes"]')
+      ?.click();
+    expect(
+      shadow?.querySelector<HTMLTextAreaElement>(
+        '[aria-label="Edit general note"]',
+      )?.value,
+    ).toBe("Between the drawings");
+  });
 });
 
 interface PointerOptions {
