@@ -1,6 +1,9 @@
 import "./styles.css";
 
 const hostile = new URLSearchParams(window.location.search).has("hostile");
+const outputFixture = new URLSearchParams(window.location.search).has(
+  "output-fixture",
+);
 
 if (hostile) {
   const style = document.createElement("style");
@@ -66,7 +69,11 @@ app.innerHTML = `
 `;
 
 if (import.meta.env.DEV || import.meta.env.VITE_DRAWOVER === "true") {
-  void import("drawover").then(({ init }) => {
-    init({ position: "bottom-right", theme: "auto" });
+  void import("drawover").then(async (drawover) => {
+    drawover.init({ position: "bottom-right", theme: "auto" });
+    if (outputFixture) {
+      const { installOutputFixture } = await import("./output-fixture.js");
+      installOutputFixture(drawover);
+    }
   });
 }
