@@ -1,5 +1,7 @@
 import { matchesHotkey, parseHotkey } from "./hotkey.js";
 import { shellStyles } from "./styles.js";
+import type { SceneStore } from "../contracts/index.js";
+import { createGeneralNotesPanel } from "../general-notes/general-notes.js";
 
 export type DrawoverMode = "element-select" | "scene";
 export type DrawoverPosition =
@@ -22,6 +24,8 @@ export interface DrawoverInstance {
 }
 
 interface CreateShellOptions extends DrawoverOptions {
+  sceneStore: SceneStore;
+  onClear: () => void;
   onDestroy: () => void;
 }
 
@@ -89,13 +93,24 @@ export function createShell(options: CreateShellOptions): DrawoverInstance {
 
   const copyButton = button("Copy", "Copy review");
   copyButton.className = "command";
+  const notes = createGeneralNotesPanel(options.sceneStore);
   const clearButton = button("Clear", "Clear annotations");
   clearButton.className = "command";
   const closeButton = button("X", "Close Drawover");
   closeButton.className = "close";
   closeButton.title = "Close";
-  toolbar.append(brand, modes, copyButton, clearButton, closeButton);
-  chrome.append(trigger, toolbar);
+  toolbar.append(
+    brand,
+    modes,
+    notes.button,
+    copyButton,
+    clearButton,
+    closeButton,
+  );
+  const workspace = document.createElement("div");
+  workspace.className = "workspace";
+  workspace.append(toolbar, notes.element);
+  chrome.append(trigger, workspace);
   root.append(targetingLayer, sceneLayer, chrome);
   shadow.append(style, root);
   document.body.append(host);
@@ -134,6 +149,12 @@ export function createShell(options: CreateShellOptions): DrawoverInstance {
     host.dispatchEvent(new CustomEvent(`drawover:${name}`, { bubbles: false }));
   };
 
+  const requestClear = (): void => {
+    options.onClear();
+    notes.close();
+    emit("clear-request");
+  };
+
   const onKeydown = (event: KeyboardEvent): void => {
     if (matchesHotkey(event, hotkey)) {
       event.preventDefault();
@@ -146,7 +167,7 @@ export function createShell(options: CreateShellOptions): DrawoverInstance {
   inspectButton.addEventListener("click", () => setMode("element-select"));
   sceneButton.addEventListener("click", () => setMode("scene"));
   copyButton.addEventListener("click", () => emit("copy-request"));
-  clearButton.addEventListener("click", () => emit("clear-request"));
+  clearButton.addEventListener("click", requestClear);
   document.addEventListener("keydown", onKeydown);
   setMode(mode);
 
@@ -157,11 +178,12 @@ export function createShell(options: CreateShellOptions): DrawoverInstance {
       emit("copy-request");
       return Promise.resolve();
     },
-    clear: () => emit("clear-request"),
+    clear: requestClear,
     destroy: () => {
       if (destroyed) return;
       destroyed = true;
       document.removeEventListener("keydown", onKeydown);
+      notes.destroy();
       host.remove();
       options.onDestroy();
     },
