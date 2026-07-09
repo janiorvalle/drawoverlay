@@ -323,6 +323,37 @@ describe("scene interactions", () => {
       623,
     );
   });
+
+  it("marquee-selects the visible bounds of a rotated annotation", () => {
+    instance = init();
+    instance.open();
+    const shadow = document.getElementById(DRAWOVER_HOST_ID)?.shadowRoot;
+    const svg = shadow?.querySelector<SVGSVGElement>('[data-layer="scene"]');
+    shadow
+      ?.querySelector<HTMLButtonElement>('button[data-mode="scene"]')
+      ?.click();
+    shadow
+      ?.querySelector<HTMLButtonElement>('button[data-tool="rect"]')
+      ?.click();
+    draw(svg, { x: 100, y: 100 }, { x: 200, y: 120 }, 10);
+    shadow
+      ?.querySelector<HTMLButtonElement>('button[data-tool="select"]')
+      ?.click();
+
+    const rotate = svg?.querySelector<SVGElement>('[data-handle="rotate"]');
+    rotate?.dispatchEvent(pointer("pointerdown", 150, 72, { pointerId: 11 }));
+    svg?.dispatchEvent(pointer("pointermove", 200, 110, { pointerId: 11 }));
+    svg?.dispatchEvent(pointer("pointerup", 200, 110, { pointerId: 11 }));
+
+    draw(svg, { x: 0, y: 0 }, { x: 5, y: 5 }, 12);
+    expect(shadow?.querySelector(".scene-status")?.textContent).toBe(
+      "1 items / 0 selected",
+    );
+    draw(svg, { x: 145, y: 65 }, { x: 155, y: 90 }, 13);
+    expect(shadow?.querySelector(".scene-status")?.textContent).toBe(
+      "1 items / 1 selected",
+    );
+  });
 });
 
 interface PointerOptions {

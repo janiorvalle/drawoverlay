@@ -153,4 +153,43 @@ describe("SVG scene renderer", () => {
     expect(svg.querySelectorAll('[data-scene-ui="true"]')).toHaveLength(1);
     expect(svg.querySelectorAll("[style]")).toHaveLength(0);
   });
+
+  it("frames a multi-selection using rotated visual bounds", () => {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    const snapshot: SceneSnapshot = {
+      version: 1,
+      annotations: [
+        {
+          id: "rotated",
+          type: "rect",
+          geometry: { x: 100, y: 180, width: 100, height: 20 },
+          z: 1,
+          rotation: 90,
+          stroke: "#e5484d",
+          fill: "transparent",
+          strokeWidth: 2,
+        },
+        {
+          id: "plain",
+          type: "rect",
+          geometry: { x: 300, y: 200, width: 20, height: 20 },
+          z: 2,
+          rotation: 0,
+          stroke: "#1769e0",
+          fill: "transparent",
+          strokeWidth: 2,
+        },
+      ],
+    };
+
+    new SceneRenderer(svg).render(snapshot, {
+      selectedIds: new Set(["rotated", "plain"]),
+    });
+
+    const box = svg.querySelector(".group-selection .selection-box");
+    expect(box?.getAttribute("x")).toBe("100");
+    expect(box?.getAttribute("y")).toBe("20");
+    expect(box?.getAttribute("width")).toBe("180");
+    expect(box?.getAttribute("height")).toBe("100");
+  });
 });

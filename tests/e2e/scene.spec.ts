@@ -22,7 +22,16 @@ test("creates and transforms rectangles, arrows, and text", async ({
   await tool(host, "select").click();
   await page.mouse.dblclick(100, 125);
   const label = host.getByRole("textbox", { name: "Rectangle label" });
-  await label.fill("Header");
+  const beforeLabelX = await rectangle.locator("rect").getAttribute("x");
+  await label.fill("Headerx");
+  await label.press("Backspace");
+  await label.press("ArrowLeft");
+  await expect(label).toHaveValue("Header");
+  await expect(rectangle).toHaveCount(1);
+  await expect(rectangle.locator("rect")).toHaveAttribute(
+    "x",
+    beforeLabelX ?? "",
+  );
   await label.press("Enter");
   await expect(rectangle.locator("text")).toHaveText("Header");
 

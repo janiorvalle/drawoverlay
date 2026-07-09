@@ -107,6 +107,12 @@ describe("scene model operations", () => {
     if (resized.type !== "text") throw new Error("Expected text.");
     expect(resized.fontSize).toBe(30);
     expect(resized.geometry).toMatchObject({ width: 150, height: 42 });
+
+    const shrunk = resizeAnnotation(text, "se", { x: 1, y: 1 });
+    if (shrunk.type !== "text") throw new Error("Expected text.");
+    expect(shrunk.fontSize).toBe(8);
+    expect(shrunk.geometry.width / text.geometry.width).toBeCloseTo(0.4);
+    expect(shrunk.geometry.height / text.geometry.height).toBeCloseTo(0.4);
   });
 
   it("returns document bounds for a rotated annotation", () => {

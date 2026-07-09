@@ -81,6 +81,7 @@ export function resizeAnnotation(
     const scale = Math.max(
       minimum / Math.max(original.width, 1),
       minimum / Math.max(original.height, 1),
+      8 / Math.max(annotation.fontSize, 1),
       Math.min(
         width / Math.max(original.width, 1),
         height / Math.max(original.height, 1),

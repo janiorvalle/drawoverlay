@@ -771,8 +771,8 @@ export class SceneEditor {
   #onKeyDown(event: KeyboardEvent): void {
     if (!this.#isSceneActive()) return;
     if (
-      event.target instanceof HTMLInputElement ||
-      event.target instanceof HTMLTextAreaElement
+      event.composedPath().some(isTextEntry) ||
+      isTextEntry(this.#shadow.activeElement)
     )
       return;
     const modifier = event.metaKey || event.ctrlKey;
@@ -1085,6 +1085,14 @@ function textWidth(text: string, fontSize: number): number {
 
 function clamp(value: number, minimum: number, maximum: number): number {
   return Math.min(Math.max(value, minimum), maximum);
+}
+
+function isTextEntry(target: EventTarget | null): boolean {
+  return (
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    (target instanceof HTMLElement && target.isContentEditable)
+  );
 }
 
 function hasMoved(
