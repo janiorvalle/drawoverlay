@@ -37,13 +37,83 @@ test("shell mode exclusively arbitrates scene pointer events", async ({
 });
 
 test("hostile host CSS does not break the shell", async ({ page }) => {
-  await page.goto("/?hostile");
+  await page.goto("/?fixture=hostile");
   const host = page.locator("#drawover-root");
   await host.locator(".trigger").click();
 
   await expect(host.locator(".toolbar")).toBeVisible();
   await expect(host.locator(".trigger")).toHaveCSS("width", "40px");
   await expect(host).toHaveCSS("z-index", "2147483647");
+});
+
+test("max-z host fixture remains below the usable Drawover chrome", async ({
+  page,
+}) => {
+  await page.goto("/?fixture=max-z");
+  const hostObstacle = page.getByTestId("max-z-hostile");
+  const host = page.locator("#drawover-root");
+  const trigger = host.locator(".trigger");
+
+  await expect(hostObstacle).toHaveCSS("z-index", "2147483647");
+  await trigger.click();
+  await expect(host.locator(".toolbar")).toBeVisible();
+});
+
+test("fixture matrix exposes stable paths and framework metadata", async ({
+  page,
+}) => {
+  await page.goto("/?fixture=framework");
+
+  await expect(page.getByTestId("expiry-date")).toBeVisible();
+  await expect(page.locator("#card-number")).toBeVisible();
+  await expect(page.locator(".fixtureControlaB12Cdef")).toBeVisible();
+  await expect(page.locator(".checkoutButton_aB12Cdef")).toBeVisible();
+  await expect(page.locator('[data-fixture="scroll-container"]')).toBeVisible();
+  const overlapFixture = page.locator('[data-fixture="overlap"]');
+  await expect(overlapFixture).toBeVisible();
+  expect(
+    await overlapFixture.evaluate((element) => {
+      const back = element
+        .querySelector(".overlap-back")
+        ?.getBoundingClientRect();
+      const front = element
+        .querySelector(".overlap-front")
+        ?.getBoundingClientRect();
+      return Boolean(
+        back &&
+        front &&
+        Math.max(back.left, front.left) < Math.min(back.right, front.right) &&
+        Math.max(back.top, front.top) < Math.min(back.bottom, front.bottom),
+      );
+    }),
+  ).toBe(true);
+
+  const metadata = await page.evaluate(() => {
+    const react = document.querySelector<HTMLElement>(
+      '[data-framework-target="react"]',
+    );
+    const vue = document.querySelector<HTMLElement>(
+      '[data-framework-target="vue"]',
+    );
+    const reactKey = Object.keys(react ?? {}).find((key) =>
+      key.startsWith("__reactFiber$"),
+    );
+
+    return {
+      react: reactKey
+        ? (react as unknown as Record<string, unknown>)[reactKey]
+        : null,
+      vue: (vue as unknown as { __vueParentComponent?: unknown })
+        .__vueParentComponent,
+    };
+  });
+
+  expect(metadata.react).toMatchObject({
+    type: { displayName: "CheckoutForm" },
+  });
+  expect(metadata.vue).toMatchObject({
+    type: { name: "CheckoutAction" },
+  });
 });
 
 test("mobile toolbar remains inside the viewport without overlap", async ({

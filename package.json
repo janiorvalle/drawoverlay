@@ -11,7 +11,7 @@
     "typecheck": "pnpm --filter drawover build && pnpm -r typecheck",
     "lint": "eslint . && prettier --check . && node scripts/verify-architecture.mjs && node scripts/verify-dependencies.mjs && node scripts/verify-infra.mjs",
     "test": "vitest run",
-    "test:e2e": "pnpm --filter drawover build && playwright test",
+    "test:e2e": "pnpm --filter drawover build && node scripts/build-preview-fixtures.mjs && playwright test",
     "test:prod-strip": "pnpm --filter drawover build && node scripts/verify-prod-strip.mjs",
     "size": "pnpm --filter drawover build && size-limit",
     "test:pack": "pnpm --filter drawover build && node scripts/verify-pack.mjs",

@@ -31,6 +31,23 @@ input {
   background: #ffffff;
 }
 
+.fixture-bar {
+  display: flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 7px 20px;
+  border-bottom: 1px solid #c8ced8;
+  background: #f8fafc;
+  color: #4b5565;
+  font-size: 12px;
+}
+
+.fixture-bar a {
+  color: #174ea6;
+}
+
 .wordmark {
   color: #14213d;
   font-size: 18px;
@@ -168,6 +185,27 @@ button[type="submit"] {
   font-weight: 800;
 }
 
+.delivery-options {
+  display: grid;
+  margin-top: 18px;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.delivery-option,
+.framework-fixtures button,
+.scroll-fixture button,
+.overlap-fixture button {
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 1px solid #aeb6c4;
+  border-radius: 5px;
+  background: #ffffff;
+  color: #273244;
+  cursor: pointer;
+  font-weight: 700;
+}
+
 .summary h2 {
   margin-bottom: 22px;
 }
@@ -178,6 +216,55 @@ button[type="submit"] {
   justify-content: space-between;
   gap: 20px;
   padding: 13px 0;
+}
+
+.scroll-fixture {
+  height: 104px;
+  margin-top: 18px;
+  overflow: auto;
+  border: 1px solid #bbc3cf;
+  border-radius: 5px;
+  background: #f8fafc;
+}
+
+.scroll-spacer {
+  display: grid;
+  height: 128px;
+  place-items: center;
+  color: #667085;
+  font-size: 12px;
+}
+
+.scroll-fixture button {
+  margin: 0 12px 12px;
+}
+
+.overlap-fixture {
+  position: relative;
+  height: 78px;
+  margin-top: 18px;
+}
+
+.overlap-fixture button {
+  position: absolute;
+  width: 132px;
+}
+
+.overlap-back {
+  top: 0;
+  left: 0;
+}
+
+.overlap-front {
+  top: 28px;
+  left: 72px;
+  background: #e6f6f1 !important;
+}
+
+.framework-fixtures {
+  display: grid;
+  margin-top: 18px;
+  gap: 8px;
 }
 
 .line-item {
@@ -196,10 +283,19 @@ button[type="submit"] {
 .host-max-z {
   position: fixed;
   z-index: 2147483647;
-  top: 0;
-  left: 0;
-  width: 1px;
-  height: 1px;
+  right: 0;
+  bottom: 0;
+  display: grid;
+  width: 132px;
+  height: 104px;
+  place-items: center;
+  padding: 12px;
+  border: 3px solid #8b3d61;
+  background: #ffe5ef;
+  color: #6f2148;
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
 }
 
 @media (max-width: 720px) {
@@ -209,6 +305,13 @@ button[type="submit"] {
 
   nav {
     gap: 10px;
+  }
+
+  .fixture-bar {
+    overflow-x: auto;
+    justify-content: flex-start;
+    gap: 12px;
+    white-space: nowrap;
   }
 
   .page-shell {
@@ -222,6 +325,10 @@ button[type="submit"] {
   }
 
   .field-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .delivery-options {
     grid-template-columns: 1fr;
   }
 }

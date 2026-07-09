@@ -16,6 +16,7 @@ out/
 coverage/
 playwright-report/
 test-results/
+.fixture-builds/
 *.tgz
 
 # Local tooling
