@@ -645,26 +645,31 @@ export class SceneEditor {
         for (const id of selected) this.#selectedIds.add(id);
         break;
       }
-      case "move":
-        if (hasMoved(session.originals, session.drafts)) {
+      case "move": {
+        const moved = hasMoved(session.originals, session.drafts);
+        if (moved) {
           this.#lastAnnotationClick = undefined;
           this.#suppressDoubleClickUntil = event.timeStamp + 600;
+          this.#store.transaction(
+            session.duplicate ? "Duplicate and move" : "Move selection",
+            (transaction) => {
+              for (const [id, draft] of session.drafts) {
+                if (session.duplicate) transaction.create(draft);
+                else transaction.update(id, () => draft);
+              }
+            },
+          );
+        } else if (session.duplicate) {
+          this.#selectedIds = new Set(session.selectedBeforeDuplicate);
+          this.#lastAnnotationClick = undefined;
         } else {
           this.#lastAnnotationClick = {
             id: session.clickedId,
             at: event.timeStamp,
           };
         }
-        this.#store.transaction(
-          session.duplicate ? "Duplicate and move" : "Move selection",
-          (transaction) => {
-            for (const [id, draft] of session.drafts) {
-              if (session.duplicate) transaction.create(draft);
-              else transaction.update(id, () => draft);
-            }
-          },
-        );
         break;
+      }
       case "resize":
       case "rotate":
       case "arrow-endpoint":
@@ -885,11 +890,19 @@ export class SceneEditor {
       this.#setTool("select");
       return;
     }
-    if (event.key === "[" || event.key === "]") {
+    const bracket =
+      event.code === "BracketLeft" || event.key === "[" || event.key === "{"
+        ? "left"
+        : event.code === "BracketRight" ||
+            event.key === "]" ||
+            event.key === "}"
+          ? "right"
+          : undefined;
+    if (bracket) {
       event.preventDefault();
       this.#cancelActivePointerSession();
       const action =
-        event.key === "]"
+        bracket === "right"
           ? modifier && event.shiftKey
             ? "front"
             : "forward"

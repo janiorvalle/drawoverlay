@@ -515,7 +515,18 @@ describe("scene interactions", () => {
     duplicate?.dispatchEvent(
       pointer("pointerdown", 90, 105, { altKey: true, pointerId: 6 }),
     );
-    svg?.dispatchEvent(pointer("pointercancel", 90, 105, { pointerId: 6 }));
+    svg?.dispatchEvent(pointer("pointerup", 90, 105, { pointerId: 6 }));
+    expect(svg?.querySelectorAll('[data-annotation-type="rect"]')).toHaveLength(
+      4,
+    );
+
+    duplicate = svg?.querySelectorAll<SVGGElement>(
+      '[data-annotation-type="rect"]',
+    )[2];
+    duplicate?.dispatchEvent(
+      pointer("pointerdown", 90, 105, { altKey: true, pointerId: 14 }),
+    );
+    svg?.dispatchEvent(pointer("pointercancel", 90, 105, { pointerId: 14 }));
     expect(svg?.querySelectorAll('[data-annotation-type="rect"]')).toHaveLength(
       4,
     );

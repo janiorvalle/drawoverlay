@@ -108,6 +108,31 @@ test("closing or clearing from the toolbar cancels inline text entry", async ({
   await expect(scene.locator('[data-annotation-type="text"]')).toHaveCount(0);
 });
 
+test("shifted bracket shortcuts send selections to the front and back", async ({
+  page,
+}) => {
+  const host = page.locator("#drawover-root");
+  const scene = host.locator('[data-layer="scene"]');
+  await tool(host, "rect").click();
+  await drag(page, { x: 45, y: 90 }, { x: 125, y: 145 });
+  await drag(page, { x: 165, y: 100 }, { x: 245, y: 155 });
+  const nodes = scene.locator('[data-annotation-type="rect"]');
+  const firstId = await nodes.first().getAttribute("data-annotation-id");
+  await tool(host, "select").click();
+  await page.mouse.click(85, 115);
+
+  await page.keyboard.press("Control+Shift+]");
+  await expect(scene.locator("[data-annotation-id]").last()).toHaveAttribute(
+    "data-annotation-id",
+    firstId ?? "",
+  );
+  await page.keyboard.press("Control+Shift+[");
+  await expect(scene.locator("[data-annotation-id]").first()).toHaveAttribute(
+    "data-annotation-id",
+    firstId ?? "",
+  );
+});
+
 test("supports marquee group moves, duplication, layers, delete, and deep history", async ({
   page,
 }) => {
