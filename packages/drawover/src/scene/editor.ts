@@ -22,7 +22,6 @@ import {
   type ZOrderAction,
 } from "./model.js";
 import { SceneRenderer } from "./renderer.js";
-import { createSceneStore } from "./store.js";
 import { sceneStyles } from "./styles.js";
 
 export type SceneTool = "arrow" | "image" | "rect" | "select" | "text";
@@ -32,7 +31,7 @@ interface SceneEditorOptions {
   sceneLayer: SVGSVGElement;
   shadow: ShadowRoot;
   toolbar: HTMLElement;
-  store?: SceneStore;
+  store: SceneStore;
 }
 
 interface DrawSession {
@@ -145,7 +144,7 @@ export class SceneEditor {
     this.#sceneLayer = options.sceneLayer;
     this.#shadow = options.shadow;
     this.#toolbar = options.toolbar;
-    this.#store = options.store ?? createSceneStore();
+    this.#store = options.store;
     this.#renderer = new SceneRenderer(this.#sceneLayer);
     this.#style = document.createElement("style");
     this.#style.textContent = sceneStyles;

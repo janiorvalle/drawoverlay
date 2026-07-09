@@ -1,6 +1,10 @@
 import "./styles.css";
+import type { ElementRef } from "drawover";
 
 const hostile = new URLSearchParams(window.location.search).has("hostile");
+const outputFixture = new URLSearchParams(window.location.search).has(
+  "output-fixture",
+);
 
 if (hostile) {
   const style = document.createElement("style");
@@ -62,11 +66,107 @@ app.innerHTML = `
       <div class="total"><span>Total</span><strong>$25.92</strong></div>
     </aside>
   </div>
+  <section class="targeting-lab" aria-labelledby="targeting-title">
+    <div class="targeting-heading">
+      <div>
+        <p class="eyebrow">Element targeting fixture</p>
+        <h2 id="targeting-title">Selector and metadata matrix</h2>
+      </div>
+      <output id="targeting-output" aria-live="polite">No element selected</output>
+    </div>
+    <div class="fixture-grid">
+      <article class="fixture-card">
+        <h3>Preferred selectors</h3>
+        <button type="button" data-testid="fixture-testid">data-testid target</button>
+        <button type="button" id="fixture-id">id target</button>
+        <div class="stable-region"><button type="button" class="stable-action">stable path target</button></div>
+        <div class="hash-region"><button type="button" class="css-1a2B3c styles_button__x7H2p">hashed class target</button></div>
+      </article>
+      <article class="fixture-card">
+        <h3>Nesting and overlap</h3>
+        <button type="button" class="nested-action"><span class="nested-label">nested label target</span></button>
+        <div class="overlap-fixture" aria-label="Overlapping targets">
+          <div class="overlap-back">back target</div>
+          <div class="overlap-front">front target</div>
+        </div>
+      </article>
+      <article class="fixture-card">
+        <h3>Scrolled container</h3>
+        <div class="scroll-fixture" tabindex="0">
+          <p>Scroll this panel</p>
+          <div class="scroll-spacer"></div>
+          <button type="button" class="scrolled-action">scrolled target</button>
+        </div>
+      </article>
+      <article class="fixture-card">
+        <h3>Framework metadata</h3>
+        <button type="button" id="react-fixture">React fiber target</button>
+        <button type="button" id="vue-fixture">Vue component target</button>
+        <button type="button" id="pass-through">Host click count: <span>0</span></button>
+      </article>
+    </div>
+  </section>
   <div class="host-max-z" aria-hidden="true"></div>
 `;
 
+document.querySelector("form")?.addEventListener("submit", (event) => {
+  event.preventDefault();
+});
+
+const reactFixture = document.querySelector("#react-fixture");
+if (reactFixture) {
+  function CheckoutAction(): null {
+    return null;
+  }
+  Object.defineProperty(reactFixture, "__reactFiber$fixture", {
+    value: {
+      type: "button",
+      return: {
+        type: CheckoutAction,
+        _debugSource: {
+          fileName: "src/components/CheckoutAction.tsx",
+          lineNumber: 24,
+        },
+        return: null,
+      },
+    },
+  });
+}
+
+const vueFixture = document.querySelector("#vue-fixture");
+if (vueFixture) {
+  Object.defineProperty(vueFixture, "__vueParentComponent", {
+    value: {
+      type: {
+        __name: "PaymentSummary",
+        __file: "src/components/PaymentSummary.vue",
+      },
+    },
+  });
+}
+
+document.querySelector("#pass-through")?.addEventListener("click", (event) => {
+  const count = (event.currentTarget as HTMLElement).querySelector("span");
+  if (count) count.textContent = String(Number(count.textContent) + 1);
+});
+
 if (import.meta.env.DEV || import.meta.env.VITE_DRAWOVER === "true") {
-  void import("drawover").then(({ init }) => {
-    init({ position: "bottom-right", theme: "auto" });
+  void import("drawover").then(async (drawover) => {
+    drawover.init({ position: "bottom-right", theme: "auto" });
+    document
+      .querySelector("#drawover-root")
+      ?.addEventListener("drawover:element-selected", (event) => {
+        const output = document.querySelector("#targeting-output");
+        const reference = (event as CustomEvent<ElementRef>).detail;
+        if (!output) return;
+        const component = reference.component
+          ? ` | ${reference.component.framework}:${reference.component.name}`
+          : "";
+        output.textContent = `${reference.selector.primary} | ${reference.facts.tag}${component}`;
+      });
+    if (outputFixture) {
+      const { installOutputFixture } = await import("./output-fixture.js");
+      installOutputFixture(drawover);
+    }
   });
 }

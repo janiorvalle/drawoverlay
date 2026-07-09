@@ -7,6 +7,7 @@ let instance: DrawoverInstance | undefined;
 afterEach(() => {
   instance?.destroy();
   instance = undefined;
+  localStorage.clear();
 });
 
 describe("scene interactions", () => {

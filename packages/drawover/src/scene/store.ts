@@ -1,105 +1,85 @@
 import type {
   Annotation,
-  SceneListener,
   SceneSnapshot,
   SceneStore,
   SceneTransaction,
 } from "../contracts/index.js";
 
-const EMPTY_SCENE: SceneSnapshot = { version: 1, annotations: [] };
+interface SceneState {
+  annotations: Annotation[];
+}
 
+/** Create the in-memory implementation of the frozen SceneStore contract. */
 export function createSceneStore(
-  initial: SceneSnapshot = EMPTY_SCENE,
+  initialAnnotations: readonly Annotation[] = [],
 ): SceneStore {
-  let present = cloneSnapshot(initial);
-  const past: SceneSnapshot[] = [];
-  const future: SceneSnapshot[] = [];
-  const listeners = new Set<SceneListener>();
+  let state = createState(initialAnnotations);
+  const undoStack: SceneState[] = [];
+  const redoStack: SceneState[] = [];
+  const listeners = new Set<(snapshot: SceneSnapshot) => void>();
+
+  const snapshot = (): SceneSnapshot => ({
+    version: 1,
+    annotations: cloneAnnotations(state.annotations),
+  });
 
   const notify = (): void => {
-    const snapshot = cloneSnapshot(present);
-    for (const listener of listeners) listener(snapshot);
-  };
-
-  const commit = (next: SceneSnapshot): void => {
-    if (snapshotsEqual(present, next)) return;
-    past.push(present);
-    present = cloneSnapshot(next);
-    future.length = 0;
-    notify();
+    const current = snapshot();
+    for (const listener of listeners) listener(current);
   };
 
   const transact = (
     operation: (transaction: SceneTransaction) => void,
   ): void => {
-    const annotations = structuredClone(present.annotations) as Annotation[];
-    const transaction: SceneTransaction = {
-      create(annotation) {
-        if (annotations.some(({ id }) => id === annotation.id)) {
-          throw new Error(`Annotation ${annotation.id} already exists.`);
-        }
-        annotations.push(structuredClone(annotation));
-      },
-      update(id, update) {
-        const index = annotations.findIndex(
-          (annotation) => annotation.id === id,
-        );
-        if (index < 0) throw new Error(`Annotation ${id} was not found.`);
-        const current = annotations[index];
-        if (!current) throw new Error(`Annotation ${id} was not found.`);
-        const next = update(structuredClone(current));
-        if (next.id !== id)
-          throw new Error("An update cannot change an annotation id.");
-        annotations[index] = structuredClone(next);
-      },
-      remove(id) {
-        const index = annotations.findIndex(
-          (annotation) => annotation.id === id,
-        );
-        if (index >= 0) annotations.splice(index, 1);
-      },
-      replaceAll(nextAnnotations) {
-        annotations.splice(
-          0,
-          annotations.length,
-          ...structuredClone(nextAnnotations),
-        );
-      },
-    };
+    const before = createState(state.annotations);
+    const next = createState(state.annotations);
+    const transaction = createTransaction(next);
 
     operation(transaction);
-    commit({ version: 1, annotations });
+    assertUniqueIds(next.annotations);
+
+    if (sameAnnotations(before.annotations, next.annotations)) return;
+    undoStack.push(before);
+    state = next;
+    redoStack.length = 0;
+    notify();
   };
 
   return {
-    getSnapshot: () => cloneSnapshot(present),
+    getSnapshot: snapshot,
     getById: (id) => {
-      const annotation = present.annotations.find(
-        (candidate) => candidate.id === id,
-      );
-      return annotation ? structuredClone(annotation) : undefined;
+      const annotation = state.annotations.find((item) => item.id === id);
+      return annotation ? cloneAnnotation(annotation) : undefined;
     },
-    create: (annotation) =>
-      transact((transaction) => transaction.create(annotation)),
-    update: (id, update) =>
-      transact((transaction) => transaction.update(id, update)),
-    remove: (id) => transact((transaction) => transaction.remove(id)),
-    clear: () => transact((transaction) => transaction.replaceAll([])),
-    transaction: (_label, operation) => transact(operation),
-    canUndo: () => past.length > 0,
-    canRedo: () => future.length > 0,
+    create: (annotation) => {
+      transact((transaction) => transaction.create(annotation));
+    },
+    update: (id, update) => {
+      transact((transaction) => transaction.update(id, update));
+    },
+    remove: (id) => {
+      transact((transaction) => transaction.remove(id));
+    },
+    clear: () => {
+      transact((transaction) => transaction.replaceAll([]));
+    },
+    transaction: (_label, operation) => {
+      transact(operation);
+    },
+    canUndo: () => undoStack.length > 0,
+    canRedo: () => redoStack.length > 0,
     undo: () => {
-      const previous = past.pop();
+      const previous = undoStack.pop();
       if (!previous) return;
-      future.push(present);
-      present = previous;
+      redoStack.push(createState(state.annotations));
+      state = previous;
       notify();
     },
     redo: () => {
-      const next = future.pop();
+      const next = redoStack.pop();
       if (!next) return;
-      past.push(present);
-      present = next;
+      undoStack.push(createState(state.annotations));
+      state = next;
       notify();
     },
     subscribe: (listener) => {
@@ -109,10 +89,63 @@ export function createSceneStore(
   };
 }
 
-function cloneSnapshot(snapshot: SceneSnapshot): SceneSnapshot {
-  return structuredClone(snapshot);
+function createTransaction(state: SceneState): SceneTransaction {
+  return {
+    create: (annotation) => {
+      if (state.annotations.some((item) => item.id === annotation.id)) {
+        throw new Error(`Annotation already exists: ${annotation.id}`);
+      }
+      state.annotations.push(cloneAnnotation(annotation));
+    },
+    update: (id, update) => {
+      const index = state.annotations.findIndex((item) => item.id === id);
+      const current = state.annotations[index];
+      if (index < 0 || !current) throw new Error(`Annotation not found: ${id}`);
+      const next = update(cloneAnnotation(current));
+      if (next.id !== id)
+        throw new Error("Annotation updates cannot change ids.");
+      state.annotations[index] = cloneAnnotation(next);
+    },
+    remove: (id) => {
+      const index = state.annotations.findIndex((item) => item.id === id);
+      if (index < 0) throw new Error(`Annotation not found: ${id}`);
+      state.annotations.splice(index, 1);
+    },
+    replaceAll: (annotations) => {
+      const next = cloneAnnotations(annotations);
+      assertUniqueIds(next);
+      state.annotations = next;
+    },
+  };
 }
 
-function snapshotsEqual(left: SceneSnapshot, right: SceneSnapshot): boolean {
-  return JSON.stringify(left) === JSON.stringify(right);
+function createState(annotations: readonly Annotation[]): SceneState {
+  const cloned = cloneAnnotations(annotations);
+  assertUniqueIds(cloned);
+  return { annotations: cloned };
+}
+
+function cloneAnnotations(annotations: readonly Annotation[]): Annotation[] {
+  return annotations.map(cloneAnnotation);
+}
+
+function cloneAnnotation(annotation: Annotation): Annotation {
+  return structuredClone(annotation);
+}
+
+function assertUniqueIds(annotations: readonly Annotation[]): void {
+  const ids = new Set<string>();
+  for (const annotation of annotations) {
+    if (ids.has(annotation.id)) {
+      throw new Error(`Duplicate annotation id: ${annotation.id}`);
+    }
+    ids.add(annotation.id);
+  }
+}
+
+function sameAnnotations(
+  first: readonly Annotation[],
+  second: readonly Annotation[],
+): boolean {
+  return JSON.stringify(first) === JSON.stringify(second);
 }

@@ -1,8 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const port = process.env.PLAYWRIGHT_PORT ?? "4173";
-const baseURL = `http://127.0.0.1:${port}`;
-const offline = process.env.PLAYWRIGHT_OFFLINE === "1";
+const playgroundPort = process.env.DRAWOVER_PLAYGROUND_PORT ?? "4173";
+const playgroundUrl = `http://127.0.0.1:${playgroundPort}`;
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -11,7 +10,7 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   reporter: process.env.CI ? "github" : "list",
   use: {
-    baseURL,
+    baseURL: playgroundUrl,
     screenshot: "only-on-failure",
     trace: "retain-on-failure",
   },
@@ -19,14 +18,10 @@ export default defineConfig({
     { name: "desktop-chromium", use: { ...devices["Desktop Chrome"] } },
     { name: "mobile-chromium", use: { ...devices["Pixel 7"] } },
   ],
-  ...(offline
-    ? {}
-    : {
-        webServer: {
-          command: `pnpm --filter @drawover/playground dev --host 127.0.0.1 --port ${port}`,
-          url: baseURL,
-          reuseExistingServer: !process.env.CI,
-          timeout: 120_000,
-        },
-      }),
+  webServer: {
+    command: `pnpm --filter @drawover/playground dev --host 127.0.0.1 --port ${playgroundPort}`,
+    url: playgroundUrl,
+    reuseExistingServer: !process.env.CI,
+    timeout: 120_000,
+  },
 });

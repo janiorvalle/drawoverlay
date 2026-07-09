@@ -5,6 +5,9 @@ import {
   type DrawoverOptions,
 } from "./shell/shell.js";
 import { createSceneEditor, type SceneEditor } from "./scene/editor.js";
+import { createElementTargetingController } from "./targeting/controller.js";
+import { bindScenePersistence } from "./persistence/persistence.js";
+import { createSceneStore } from "./scene/store.js";
 
 export type {
   Annotation,
@@ -21,6 +24,19 @@ export {
   viewportRectToDocument,
   viewportToDocument,
 } from "./coordinates.js";
+export {
+  copyJson,
+  copyMarkdown,
+  exportCompositedPng,
+  serializeReview,
+  writeReviewToClipboard,
+} from "./output/index.js";
+export type {
+  ClipboardFormat,
+  ClipboardWriter,
+  CompositedPngOptions,
+  PngExportDependencies,
+} from "./output/index.js";
 export type {
   DrawoverInstance,
   DrawoverMode,
@@ -35,11 +51,16 @@ let activeInstance: DrawoverInstance | undefined;
 export function init(options: DrawoverOptions = {}): DrawoverInstance {
   if (activeInstance) return activeInstance;
 
-  const integration: { sceneEditor?: SceneEditor } = {};
-  const instance = createShell({
+  const store = createSceneStore();
+  const persistence = bindScenePersistence(store, {
+    ...(options.storageKey ? { storageKey: options.storageKey } : {}),
+  });
+  const shell = createShell({
     ...options,
+    sceneStore: store,
+    onClear: () => persistence.clear(),
     onDestroy: () => {
-      integration.sceneEditor?.destroy();
+      persistence.destroy();
       activeInstance = undefined;
     },
   });
@@ -50,15 +71,27 @@ export function init(options: DrawoverOptions = {}): DrawoverInstance {
   );
   const toolbar = shadow?.querySelector<HTMLElement>(".toolbar");
   if (!host || !shadow || !sceneLayer || !toolbar) {
-    instance.destroy();
+    shell.destroy();
     throw new Error("Drawover scene could not attach to the shell.");
   }
-  integration.sceneEditor = createSceneEditor({
+  const sceneEditor: SceneEditor = createSceneEditor({
     host,
     sceneLayer,
     shadow,
+    store,
     toolbar,
   });
-  activeInstance = instance;
-  return instance;
+  const targeting = createElementTargetingController(host);
+  let destroyed = false;
+  activeInstance = {
+    ...shell,
+    destroy: () => {
+      if (destroyed) return;
+      destroyed = true;
+      targeting.destroy();
+      sceneEditor.destroy();
+      shell.destroy();
+    },
+  };
+  return activeInstance;
 }

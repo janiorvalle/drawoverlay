@@ -7,6 +7,7 @@ let current: DrawoverInstance | undefined;
 afterEach(() => {
   current?.destroy();
   current = undefined;
+  localStorage.clear();
 });
 
 describe("shell", () => {
@@ -78,6 +79,43 @@ describe("shell", () => {
     instance.clear();
     expect(copy).toHaveBeenCalledOnce();
     expect(clear).toHaveBeenCalledOnce();
+    instance.destroy();
+  });
+
+  it("hydrates and clears the storage key override", () => {
+    const key = "custom-shell-scene";
+    localStorage.setItem(
+      key,
+      JSON.stringify({
+        version: 1,
+        annotations: [
+          {
+            id: "note-1",
+            type: "note",
+            geometry: { x: 0, y: 0, width: 0, height: 0 },
+            z: 0,
+            rotation: 0,
+            text: "Hydrated note",
+          },
+        ],
+      }),
+    );
+    const instance = init({ storageKey: key });
+    current = instance;
+    instance.open();
+    const shadow = document.getElementById(DRAWOVER_HOST_ID)?.shadowRoot;
+    shadow
+      ?.querySelector<HTMLButtonElement>('[aria-label="Open general notes"]')
+      ?.click();
+
+    expect(
+      shadow?.querySelector<HTMLTextAreaElement>(
+        '[aria-label="Edit general note"]',
+      )?.value,
+    ).toBe("Hydrated note");
+
+    instance.clear();
+    expect(localStorage.getItem(key)).toBeNull();
     instance.destroy();
   });
 });
