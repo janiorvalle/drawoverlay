@@ -324,6 +324,73 @@ button[type="submit"] {
   height: 1px;
 }
 
+.output-fixture {
+  width: min(1040px, calc(100% - 40px));
+  margin: 0 auto 96px;
+  padding-top: 28px;
+  border-top: 1px solid #c8ced8;
+}
+
+.output-fixture h2 {
+  margin-bottom: 16px;
+}
+
+.output-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.output-actions button,
+.output-actions a {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  padding: 0 12px;
+  border: 1px solid #aeb6c4;
+  border-radius: 5px;
+  background: #ffffff;
+  color: #18212f;
+  cursor: pointer;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.output-status {
+  min-height: 20px;
+  margin: 12px 0;
+  color: #4a5565;
+}
+
+.output-fixture label {
+  display: block;
+}
+
+#output-pasteback {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #aeb6c4;
+  border-radius: 5px;
+  background: #ffffff;
+  color: #18212f;
+  font:
+    12px/1.45 ui-monospace,
+    monospace;
+  resize: vertical;
+}
+
+.output-preview:not([src]) {
+  display: none;
+}
+
+.output-preview {
+  display: block;
+  max-width: 100%;
+  margin-top: 20px;
+  border: 1px solid #aeb6c4;
+}
+
 @media (max-width: 720px) {
   .site-header {
     padding: 0 18px;

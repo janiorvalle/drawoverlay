@@ -21,6 +21,19 @@ export {
   viewportRectToDocument,
   viewportToDocument,
 } from "./coordinates.js";
+export {
+  copyJson,
+  copyMarkdown,
+  exportCompositedPng,
+  serializeReview,
+  writeReviewToClipboard,
+} from "./output/index.js";
+export type {
+  ClipboardFormat,
+  ClipboardWriter,
+  CompositedPngOptions,
+  PngExportDependencies,
+} from "./output/index.js";
 export type {
   DrawoverInstance,
   DrawoverMode,

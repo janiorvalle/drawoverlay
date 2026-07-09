@@ -2,6 +2,9 @@ import "./styles.css";
 import type { ElementRef } from "drawover";
 
 const hostile = new URLSearchParams(window.location.search).has("hostile");
+const outputFixture = new URLSearchParams(window.location.search).has(
+  "output-fixture",
+);
 
 if (hostile) {
   const style = document.createElement("style");
@@ -148,8 +151,8 @@ document.querySelector("#pass-through")?.addEventListener("click", (event) => {
 });
 
 if (import.meta.env.DEV || import.meta.env.VITE_DRAWOVER === "true") {
-  void import("drawover").then(({ init }) => {
-    init({ position: "bottom-right", theme: "auto" });
+  void import("drawover").then(async (drawover) => {
+    drawover.init({ position: "bottom-right", theme: "auto" });
     document
       .querySelector("#drawover-root")
       ?.addEventListener("drawover:element-selected", (event) => {
@@ -161,5 +164,9 @@ if (import.meta.env.DEV || import.meta.env.VITE_DRAWOVER === "true") {
           : "";
         output.textContent = `${reference.selector.primary} | ${reference.facts.tag}${component}`;
       });
+    if (outputFixture) {
+      const { installOutputFixture } = await import("./output-fixture.js");
+      installOutputFixture(drawover);
+    }
   });
 }
