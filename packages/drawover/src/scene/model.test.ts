@@ -131,12 +131,13 @@ describe("scene model operations", () => {
   it("moves a multi-selection through each z-order operation", () => {
     const annotations = [rect("one", 1), rect("two", 2), rect("three", 3)];
     const selected = new Set(["one"]);
-    expect(
-      reorderAnnotations(annotations, selected, "forward").map(({ id }) => id),
-    ).toEqual(["two", "one", "three"]);
-    expect(
-      reorderAnnotations(annotations, selected, "front").map(({ id }) => id),
-    ).toEqual(["two", "three", "one"]);
+    const forward = reorderAnnotations(annotations, selected, "forward");
+    const front = reorderAnnotations(annotations, selected, "front");
+
+    expect(forward.map(({ id }) => id)).toEqual(["one", "two", "three"]);
+    expect(front.map(({ id }) => id)).toEqual(["one", "two", "three"]);
+    expect(stackIds(forward)).toEqual(["two", "one", "three"]);
+    expect(stackIds(front)).toEqual(["two", "three", "one"]);
   });
 });
 
@@ -164,4 +165,10 @@ function rotate(
 function expectPoint(actual: DocumentPoint, expected: DocumentPoint): void {
   expect(actual.x).toBeCloseTo(expected.x);
   expect(actual.y).toBeCloseTo(expected.y);
+}
+
+function stackIds(annotations: readonly { id: string; z: number }[]): string[] {
+  return [...annotations]
+    .sort((left, right) => left.z - right.z)
+    .map(({ id }) => id);
 }

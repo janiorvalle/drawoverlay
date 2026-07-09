@@ -1,4 +1,4 @@
-import { viewportRectToDocument } from "../coordinates.js";
+import { getScrollOffset, viewportRectToDocument } from "../coordinates.js";
 
 interface ScreenshotLibrary {
   toCanvas(
@@ -44,6 +44,8 @@ export async function exportCompositedPng(
   const pixelRatio = options.pixelRatio ?? window.devicePixelRatio;
   const width = Math.max(page.scrollWidth, page.clientWidth, 1);
   const height = Math.max(page.scrollHeight, page.clientHeight, 1);
+  const pageBounds = viewportRectToDocument(page.getBoundingClientRect());
+  const scroll = getScrollOffset();
   const root = options.annotationSvg.getRootNode();
   const overlayHost = root instanceof ShadowRoot ? root.host : undefined;
 
@@ -75,7 +77,12 @@ export async function exportCompositedPng(
   let annotationImage: CanvasImageSource;
   try {
     annotationImage = await dependencies.loadSvgImage(
-      createExportSvg(options.annotationSvg),
+      createExportSvg(options.annotationSvg, {
+        height,
+        offsetX: scroll.x - pageBounds.x,
+        offsetY: scroll.y - pageBounds.y,
+        width,
+      }),
     );
   } catch (error) {
     throw pngError(
@@ -87,18 +94,9 @@ export async function exportCompositedPng(
   const context = canvas.getContext("2d");
   if (!context) throw new Error("Could not create the PNG canvas context.");
 
-  const viewportBounds = options.annotationSvg.getBoundingClientRect();
-  const documentBounds = viewportRectToDocument(viewportBounds);
-  const pageBounds = viewportRectToDocument(page.getBoundingClientRect());
   const scaleX = canvas.width / width;
   const scaleY = canvas.height / height;
-  context.drawImage(
-    annotationImage,
-    (documentBounds.x - pageBounds.x) * scaleX,
-    (documentBounds.y - pageBounds.y) * scaleY,
-    documentBounds.width * scaleX,
-    documentBounds.height * scaleY,
-  );
+  context.drawImage(annotationImage, 0, 0, width * scaleX, height * scaleY);
 
   try {
     return await dependencies.encodePng(canvas);
@@ -132,15 +130,33 @@ async function loadSvgImage(svg: SVGSVGElement): Promise<HTMLImageElement> {
   return image;
 }
 
-function createExportSvg(svg: SVGSVGElement): SVGSVGElement {
+function createExportSvg(
+  svg: SVGSVGElement,
+  options: {
+    height: number;
+    offsetX: number;
+    offsetY: number;
+    width: number;
+  },
+): SVGSVGElement {
   const clone = svg.cloneNode(true) as SVGSVGElement;
-  const bounds = svg.getBoundingClientRect();
   for (const element of clone.querySelectorAll('[data-scene-ui="true"]')) {
     element.remove();
   }
+  const translated = document.createElementNS(
+    "http://www.w3.org/2000/svg",
+    "g",
+  );
+  translated.dataset.exportScene = "true";
+  translated.setAttribute(
+    "transform",
+    `translate(${String(options.offsetX)} ${String(options.offsetY)})`,
+  );
+  translated.append(...clone.children);
+  clone.append(translated);
   clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-  clone.setAttribute("width", String(Math.max(bounds.width, 1)));
-  clone.setAttribute("height", String(Math.max(bounds.height, 1)));
+  clone.setAttribute("width", String(Math.max(options.width, 1)));
+  clone.setAttribute("height", String(Math.max(options.height, 1)));
   return clone;
 }
 

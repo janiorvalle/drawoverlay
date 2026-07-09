@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { PngExportDependencies } from "./png.js";
 import { exportCompositedPng } from "./png.js";
 
@@ -16,6 +16,11 @@ interface PngHarness {
 }
 
 describe("composited PNG output", () => {
+  beforeEach(() => {
+    Object.defineProperty(window, "scrollX", { configurable: true, value: 0 });
+    Object.defineProperty(window, "scrollY", { configurable: true, value: 0 });
+  });
+
   it("lazy-loads the screenshot dependency only when export starts", async () => {
     const harness = createHarness();
     expect(harness.loadScreenshotLibrary).not.toHaveBeenCalled();
@@ -59,8 +64,48 @@ describe("composited PNG output", () => {
       exported?.querySelector('[data-annotation-id="rect-1"]'),
     ).not.toBeNull();
     expect(exported?.querySelector('[data-scene-ui="true"]')).toBeNull();
-    expect(exported?.getAttribute("width")).toBe("180");
-    expect(exported?.getAttribute("height")).toBe("80");
+    expect(exported?.getAttribute("width")).toBe("200");
+    expect(exported?.getAttribute("height")).toBe("100");
+    expect(
+      exported
+        ?.querySelector('[data-export-scene="true"]')
+        ?.getAttribute("transform"),
+    ).toBe("translate(0 0)");
+  });
+
+  it("translates viewport-rendered annotations into a full-page SVG", async () => {
+    const harness = createHarness();
+    Object.defineProperty(window, "scrollY", {
+      configurable: true,
+      value: 400,
+    });
+    Object.defineProperty(harness.page, "scrollHeight", { value: 1_000 });
+    harness.page.getBoundingClientRect = () =>
+      ({
+        bottom: 600,
+        height: 1_000,
+        left: 0,
+        right: 200,
+        top: -400,
+        width: 200,
+        x: 0,
+        y: -400,
+        toJSON: () => ({}),
+      }) satisfies DOMRect;
+
+    await exportCompositedPng(
+      { annotationSvg: harness.svg, page: harness.page },
+      harness.dependencies,
+    );
+
+    const exported = harness.loadSvgImage.mock.calls[0]?.[0] as
+      SVGSVGElement | undefined;
+    expect(exported?.getAttribute("height")).toBe("1000");
+    expect(
+      exported
+        ?.querySelector('[data-export-scene="true"]')
+        ?.getAttribute("transform"),
+    ).toBe("translate(0 400)");
   });
 
   it("excludes the Shadow DOM overlay host from the page capture", async () => {

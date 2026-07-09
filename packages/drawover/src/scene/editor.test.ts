@@ -191,10 +191,21 @@ describe("scene interactions", () => {
     duplicate?.dispatchEvent(
       pointer("pointerdown", 90, 105, { altKey: true, pointerId: 6 }),
     );
-    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    svg?.dispatchEvent(pointer("pointercancel", 90, 105, { pointerId: 6 }));
     expect(svg?.querySelectorAll('[data-annotation-type="rect"]')).toHaveLength(
       4,
     );
+    expect(shadow?.querySelector(".scene-status")?.textContent).toBe(
+      "4 items / 2 selected",
+    );
+
+    duplicate = svg?.querySelectorAll<SVGGElement>(
+      '[data-annotation-type="rect"]',
+    )[2];
+    duplicate?.dispatchEvent(
+      pointer("pointerdown", 90, 105, { altKey: true, pointerId: 7 }),
+    );
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
     expect(shadow?.querySelector(".scene-status")?.textContent).toBe(
       "4 items / 2 selected",
     );

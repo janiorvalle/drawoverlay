@@ -118,6 +118,8 @@ export class SceneEditor {
     this.#onPointerMove(event);
   readonly #onPointerUpBound = (event: PointerEvent): void =>
     this.#onPointerUp(event);
+  readonly #onPointerCancelBound = (event: PointerEvent): void =>
+    this.#cancelPointerSession(event.pointerId);
   readonly #onDoubleClickBound = (event: MouseEvent): void =>
     this.#onDoubleClick(event);
   readonly #onKeyDownBound = (event: KeyboardEvent): void =>
@@ -184,7 +186,10 @@ export class SceneEditor {
     this.#sceneLayer.addEventListener("pointerdown", this.#onPointerDownBound);
     this.#sceneLayer.addEventListener("pointermove", this.#onPointerMoveBound);
     this.#sceneLayer.addEventListener("pointerup", this.#onPointerUpBound);
-    this.#sceneLayer.addEventListener("pointercancel", this.#onPointerUpBound);
+    this.#sceneLayer.addEventListener(
+      "pointercancel",
+      this.#onPointerCancelBound,
+    );
     this.#sceneLayer.addEventListener("dblclick", this.#onDoubleClickBound);
     document.addEventListener("keydown", this.#onKeyDownBound);
     document.addEventListener("paste", this.#onPasteBound);
@@ -221,7 +226,7 @@ export class SceneEditor {
     this.#sceneLayer.removeEventListener("pointerup", this.#onPointerUpBound);
     this.#sceneLayer.removeEventListener(
       "pointercancel",
-      this.#onPointerUpBound,
+      this.#onPointerCancelBound,
     );
     this.#sceneLayer.removeEventListener("dblclick", this.#onDoubleClickBound);
     document.removeEventListener("keydown", this.#onKeyDownBound);
@@ -639,6 +644,17 @@ export class SceneEditor {
     this.#render();
   }
 
+  #cancelPointerSession(pointerId: number): void {
+    const session = this.#session;
+    if (session?.pointerId !== pointerId) return;
+    this.#session = undefined;
+    this.#release(pointerId);
+    if (session.kind === "move" && session.duplicate) {
+      this.#selectedIds = new Set(session.selectedBeforeDuplicate);
+    }
+    this.#render();
+  }
+
   #onDoubleClick(event: MouseEvent): void {
     if (
       !this.#isSceneActive() ||
@@ -784,11 +800,7 @@ export class SceneEditor {
     if (event.key === "Escape") {
       event.preventDefault();
       const session = this.#session;
-      if (session) this.#release(session.pointerId);
-      if (session?.kind === "move" && session.duplicate) {
-        this.#selectedIds = new Set(session.selectedBeforeDuplicate);
-      }
-      this.#session = undefined;
+      if (session) this.#cancelPointerSession(session.pointerId);
       this.#setTool("select");
       return;
     }

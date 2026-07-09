@@ -194,10 +194,7 @@ export function reorderAnnotations(
     const rest = ordered.filter(({ id }) => !selectedIds.has(id));
     const combined =
       action === "front" ? [...rest, ...selected] : [...selected, ...rest];
-    return combined.map((annotation, index) => ({
-      ...annotation,
-      z: index + 1,
-    }));
+    return applyStackOrder(annotations, combined);
   }
 
   const step = action === "forward" ? -1 : 1;
@@ -217,5 +214,18 @@ export function reorderAnnotations(
       ordered[neighborIndex] = current;
     }
   }
-  return ordered.map((annotation, index) => ({ ...annotation, z: index + 1 }));
+  return applyStackOrder(annotations, ordered);
+}
+
+function applyStackOrder(
+  annotations: readonly Annotation[],
+  stackOrder: readonly Annotation[],
+): Annotation[] {
+  const zById = new Map(
+    stackOrder.map(({ id }, index) => [id, index + 1] as const),
+  );
+  return annotations.map((annotation) => ({
+    ...annotation,
+    z: zById.get(annotation.id) ?? annotation.z,
+  }));
 }
