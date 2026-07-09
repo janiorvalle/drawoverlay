@@ -173,10 +173,10 @@ nav .active {
 }
 
 .overlap-front {
-  right: 8px;
-  bottom: 0;
+  top: 28px;
+  left: 72px;
   border-color: #8b3d61;
-  background: #f5dce8;
+  background: #e6f6f1 !important;
 }
 
 .scroll-fixture {
