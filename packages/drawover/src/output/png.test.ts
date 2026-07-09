@@ -39,6 +39,45 @@ describe("composited PNG output", () => {
     expect(harness.encodePng).toHaveBeenCalledWith(harness.canvas);
   });
 
+  it("snapshots SVG geometry and scroll coordinates before async capture", async () => {
+    const harness = createHarness();
+    const annotation = document.createElementNS(
+      "http://www.w3.org/2000/svg",
+      "rect",
+    );
+    annotation.setAttribute("x", "10");
+    harness.svg.append(annotation);
+    let resolveLibrary:
+      ((library: { toCanvas: PngHarness["toCanvas"] }) => void) | undefined;
+    const libraryPromise = new Promise<{
+      toCanvas: PngHarness["toCanvas"];
+    }>((resolve) => {
+      resolveLibrary = resolve;
+    });
+    harness.loadScreenshotLibrary.mockReturnValue(libraryPromise);
+
+    const exportPromise = exportCompositedPng(
+      { annotationSvg: harness.svg, page: harness.page },
+      harness.dependencies,
+    );
+    Object.defineProperty(window, "scrollY", {
+      configurable: true,
+      value: 400,
+    });
+    annotation.setAttribute("x", "99");
+    resolveLibrary?.({ toCanvas: harness.toCanvas });
+    await exportPromise;
+
+    const exported = harness.loadSvgImage.mock.calls[0]?.[0] as
+      SVGSVGElement | undefined;
+    expect(exported?.querySelector("rect")?.getAttribute("x")).toBe("10");
+    expect(
+      exported
+        ?.querySelector('[data-export-scene="true"]')
+        ?.getAttribute("transform"),
+    ).toBe("translate(0 0)");
+  });
+
   it("removes selection chrome from the standalone annotation SVG", async () => {
     const harness = createHarness();
     const annotation = document.createElementNS(

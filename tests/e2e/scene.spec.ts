@@ -76,6 +76,11 @@ test("creates and transforms rectangles, arrows, and text", async ({
   await expect(scene.locator('[data-annotation-type="text"]')).toContainText(
     "Move this section",
   );
+
+  await host.getByRole("button", { name: "Close Drawover" }).click();
+  await expect(scene.locator("[data-annotation-id]")).toHaveCount(0);
+  await host.locator(".trigger").click();
+  await expect(scene.locator("[data-annotation-id]")).toHaveCount(3);
 });
 
 test("supports marquee group moves, duplication, layers, delete, and deep history", async ({

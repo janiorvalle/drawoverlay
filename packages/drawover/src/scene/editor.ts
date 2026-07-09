@@ -129,6 +129,7 @@ export class SceneEditor {
     void this.#onPaste(event);
   };
   readonly #onViewportChangeBound = (): void => this.#render();
+  readonly #shellVisibilityObserver: MutationObserver;
   readonly #onClearBound = (): void => {
     this.#store.clear("Clear scene");
     this.#selectedIds.clear();
@@ -198,6 +199,14 @@ export class SceneEditor {
       passive: true,
     });
     window.addEventListener("resize", this.#onViewportChangeBound);
+    this.#shellVisibilityObserver = new MutationObserver(() => {
+      if (this.#toolbar.hidden) this.#cancelActivePointerSession();
+      this.#render();
+    });
+    this.#shellVisibilityObserver.observe(this.#sceneLayer, {
+      attributeFilter: ["style"],
+      attributes: true,
+    });
     this.#host.addEventListener("drawover:clear-request", this.#onClearBound);
     this.#unsubscribe = this.#store.subscribe(() => {
       this.#pruneSelection();
@@ -234,6 +243,7 @@ export class SceneEditor {
     document.removeEventListener("paste", this.#onPasteBound);
     window.removeEventListener("scroll", this.#onViewportChangeBound);
     window.removeEventListener("resize", this.#onViewportChangeBound);
+    this.#shellVisibilityObserver.disconnect();
     this.#host.removeEventListener(
       "drawover:clear-request",
       this.#onClearBound,
@@ -656,6 +666,11 @@ export class SceneEditor {
     this.#render();
   }
 
+  #cancelActivePointerSession(): void {
+    const session = this.#session;
+    if (session) this.#cancelPointerSession(session.pointerId);
+  }
+
   #onDoubleClick(event: MouseEvent): void {
     if (
       !this.#isSceneActive() ||
@@ -716,7 +731,10 @@ export class SceneEditor {
       const value = input.value.trim();
       input.remove();
       if (this.#inlineEditor === input) this.#inlineEditor = undefined;
-      if (!commit || value.length === 0) return;
+      if (!commit || value.length === 0) {
+        if (!annotation) this.#setTool("select");
+        return;
+      }
       if (annotation?.type === "rect") {
         this.#store.update(
           annotation.id,
@@ -771,30 +789,36 @@ export class SceneEditor {
   #onKeyDown(event: KeyboardEvent): void {
     if (!this.#isSceneActive()) return;
     if (
+      event.defaultPrevented ||
       event.composedPath().some(isTextEntry) ||
-      isTextEntry(this.#shadow.activeElement)
+      isTextEntry(this.#shadow.activeElement) ||
+      hasExternalFocus(this.#host)
     )
       return;
     const modifier = event.metaKey || event.ctrlKey;
     const key = event.key.toLowerCase();
     if (modifier && key === "z") {
       event.preventDefault();
+      this.#cancelActivePointerSession();
       if (event.shiftKey) this.#store.redo();
       else this.#store.undo();
       return;
     }
     if (modifier && key === "y") {
       event.preventDefault();
+      this.#cancelActivePointerSession();
       this.#store.redo();
       return;
     }
     if (modifier && key === "d") {
       event.preventDefault();
+      this.#cancelActivePointerSession();
       this.#duplicateSelection();
       return;
     }
     if (event.key === "Delete" || event.key === "Backspace") {
       event.preventDefault();
+      this.#cancelActivePointerSession();
       this.#deleteSelection();
       return;
     }
@@ -807,6 +831,7 @@ export class SceneEditor {
     }
     if (event.key === "[" || event.key === "]") {
       event.preventDefault();
+      this.#cancelActivePointerSession();
       const action =
         event.key === "]"
           ? modifier && event.shiftKey
@@ -831,6 +856,7 @@ export class SceneEditor {
               : undefined;
     if (delta) {
       event.preventDefault();
+      this.#cancelActivePointerSession();
       this.#translateSelection(delta, "Nudge selection");
     }
   }
@@ -1012,6 +1038,15 @@ export class SceneEditor {
 
   #render(): void {
     if (this.#destroyed) return;
+    const snapshot = this.#store.getSnapshot();
+    if (this.#toolbar.hidden) {
+      this.#renderer.render(
+        { ...snapshot, annotations: [] },
+        { selectedIds: new Set() },
+      );
+      this.#updateControls(snapshot.annotations.length);
+      return;
+    }
     const session = this.#session;
     const overrides = new Map<string, Annotation>();
     const previews: Annotation[] = [];
@@ -1031,14 +1066,17 @@ export class SceneEditor {
       overrides.set(session.original.id, session.draft);
     }
     if (session?.kind === "marquee") marquee = session.current;
-    this.#renderer.render(this.#store.getSnapshot(), {
+    this.#renderer.render(snapshot, {
       selectedIds: this.#selectedIds,
       overrides,
       previews,
       ...(marquee ? { marquee } : {}),
     });
-    const snapshot = this.#store.getSnapshot();
-    this.#status.textContent = `${String(snapshot.annotations.length)} items / ${String(this.#selectedIds.size)} selected`;
+    this.#updateControls(snapshot.annotations.length);
+  }
+
+  #updateControls(annotationCount: number): void {
+    this.#status.textContent = `${String(annotationCount)} items / ${String(this.#selectedIds.size)} selected`;
     const undo = this.#historyGroup.querySelector<HTMLButtonElement>(
       '[data-command="undo"]',
     );
@@ -1092,6 +1130,16 @@ function isTextEntry(target: EventTarget | null): boolean {
     target instanceof HTMLInputElement ||
     target instanceof HTMLTextAreaElement ||
     (target instanceof HTMLElement && target.isContentEditable)
+  );
+}
+
+function hasExternalFocus(host: HTMLElement): boolean {
+  const active = document.activeElement;
+  return (
+    active instanceof HTMLElement &&
+    active !== document.body &&
+    active !== document.documentElement &&
+    active !== host
   );
 }
 

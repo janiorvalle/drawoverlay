@@ -48,6 +48,12 @@ export async function exportCompositedPng(
   const scroll = getScrollOffset();
   const root = options.annotationSvg.getRootNode();
   const overlayHost = root instanceof ShadowRoot ? root.host : undefined;
+  const exportSvg = createExportSvg(options.annotationSvg, {
+    height,
+    offsetX: scroll.x - pageBounds.x,
+    offsetY: scroll.y - pageBounds.y,
+    width,
+  });
 
   let library: ScreenshotLibrary;
   try {
@@ -76,14 +82,7 @@ export async function exportCompositedPng(
 
   let annotationImage: CanvasImageSource;
   try {
-    annotationImage = await dependencies.loadSvgImage(
-      createExportSvg(options.annotationSvg, {
-        height,
-        offsetX: scroll.x - pageBounds.x,
-        offsetY: scroll.y - pageBounds.y,
-        width,
-      }),
-    );
+    annotationImage = await dependencies.loadSvgImage(exportSvg);
   } catch (error) {
     throw pngError(
       "Could not render the annotation SVG for PNG export.",

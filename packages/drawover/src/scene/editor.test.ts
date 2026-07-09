@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { init } from "../index.js";
 import { DRAWOVER_HOST_ID, type DrawoverInstance } from "../shell/shell.js";
 
@@ -50,6 +50,131 @@ describe("scene interactions", () => {
     expect(svg?.querySelectorAll('[data-annotation-type="rect"]')).toHaveLength(
       1,
     );
+  });
+
+  it("hides annotations while the shell is closed and restores them on open", async () => {
+    instance = init();
+    instance.open();
+    const shadow = document.getElementById(DRAWOVER_HOST_ID)?.shadowRoot;
+    const svg = shadow?.querySelector<SVGSVGElement>('[data-layer="scene"]');
+    shadow
+      ?.querySelector<HTMLButtonElement>('button[data-mode="scene"]')
+      ?.click();
+    shadow
+      ?.querySelector<HTMLButtonElement>('button[data-tool="rect"]')
+      ?.click();
+    draw(svg, { x: 80, y: 100 }, { x: 240, y: 190 }, 20);
+
+    expect(svg?.querySelectorAll('[data-annotation-type="rect"]')).toHaveLength(
+      1,
+    );
+    instance.close();
+    await vi.waitFor(() => {
+      expect(
+        svg?.querySelectorAll('[data-annotation-type="rect"]'),
+      ).toHaveLength(0);
+    });
+
+    instance.open();
+    await vi.waitFor(() => {
+      expect(
+        svg?.querySelectorAll('[data-annotation-type="rect"]'),
+      ).toHaveLength(1);
+    });
+  });
+
+  it("cancels an active transform before applying a history shortcut", () => {
+    instance = init();
+    instance.open();
+    const shadow = document.getElementById(DRAWOVER_HOST_ID)?.shadowRoot;
+    const svg = shadow?.querySelector<SVGSVGElement>('[data-layer="scene"]');
+    shadow
+      ?.querySelector<HTMLButtonElement>('button[data-mode="scene"]')
+      ?.click();
+    shadow
+      ?.querySelector<HTMLButtonElement>('button[data-tool="rect"]')
+      ?.click();
+    draw(svg, { x: 80, y: 100 }, { x: 240, y: 190 }, 21);
+    shadow
+      ?.querySelector<HTMLButtonElement>('button[data-tool="select"]')
+      ?.click();
+
+    const resize = svg?.querySelector<SVGElement>('[data-handle="se"]');
+    resize?.dispatchEvent(pointer("pointerdown", 240, 190, { pointerId: 22 }));
+    svg?.dispatchEvent(pointer("pointermove", 280, 220, { pointerId: 22 }));
+    document.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "z", ctrlKey: true }),
+    );
+    svg?.dispatchEvent(pointer("pointerup", 280, 220, { pointerId: 22 }));
+
+    expect(svg?.querySelectorAll('[data-annotation-type="rect"]')).toHaveLength(
+      0,
+    );
+    document.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "z", ctrlKey: true, shiftKey: true }),
+    );
+    expect(svg?.querySelectorAll('[data-annotation-type="rect"]')).toHaveLength(
+      1,
+    );
+  });
+
+  it("returns to select when new text entry is canceled", () => {
+    instance = init();
+    instance.open();
+    const shadow = document.getElementById(DRAWOVER_HOST_ID)?.shadowRoot;
+    const svg = shadow?.querySelector<SVGSVGElement>('[data-layer="scene"]');
+    shadow
+      ?.querySelector<HTMLButtonElement>('button[data-mode="scene"]')
+      ?.click();
+    shadow
+      ?.querySelector<HTMLButtonElement>('button[data-tool="text"]')
+      ?.click();
+    svg?.dispatchEvent(pointer("pointerdown", 100, 100, { pointerId: 23 }));
+
+    shadow
+      ?.querySelector<HTMLInputElement>(".inline-editor")
+      ?.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    expect(
+      shadow
+        ?.querySelector<HTMLButtonElement>('button[data-tool="select"]')
+        ?.getAttribute("aria-pressed"),
+    ).toBe("true");
+
+    svg?.dispatchEvent(pointer("pointerdown", 160, 160, { pointerId: 24 }));
+    expect(shadow?.querySelector(".inline-editor")).toBeNull();
+  });
+
+  it("leaves shortcuts inside a closed host shadow root untouched", () => {
+    instance = init();
+    instance.open();
+    const shadow = document.getElementById(DRAWOVER_HOST_ID)?.shadowRoot;
+    const svg = shadow?.querySelector<SVGSVGElement>('[data-layer="scene"]');
+    shadow
+      ?.querySelector<HTMLButtonElement>('button[data-mode="scene"]')
+      ?.click();
+    shadow
+      ?.querySelector<HTMLButtonElement>('button[data-tool="rect"]')
+      ?.click();
+    draw(svg, { x: 80, y: 100 }, { x: 240, y: 190 }, 25);
+
+    const externalHost = document.createElement("div");
+    const externalInput = document.createElement("input");
+    externalHost.attachShadow({ mode: "closed" }).append(externalInput);
+    document.body.append(externalHost);
+    externalInput.focus();
+    const deleteEvent = new KeyboardEvent("keydown", {
+      bubbles: true,
+      composed: true,
+      key: "Delete",
+    });
+    externalInput.dispatchEvent(deleteEvent);
+
+    expect(document.activeElement).toBe(externalHost);
+    expect(deleteEvent.defaultPrevented).toBe(false);
+    expect(svg?.querySelectorAll('[data-annotation-type="rect"]')).toHaveLength(
+      1,
+    );
+    externalHost.remove();
   });
 
   it("labels, resizes, rotates, and edits arrow endpoints", () => {
