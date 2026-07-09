@@ -950,9 +950,15 @@ export class SceneEditor {
   async #insertImage(file: File): Promise<void> {
     if (!file.type.startsWith("image/")) return;
     const generation = this.#imageImportGeneration;
-    const dataUrl = await readDataUrl(file);
-    if (!this.#isImageImportCurrent(generation)) return;
-    const dimensions = await readImageDimensions(dataUrl);
+    let dataUrl: string;
+    let dimensions: { height: number; width: number };
+    try {
+      dataUrl = await readDataUrl(file);
+      if (!this.#isImageImportCurrent(generation)) return;
+      dimensions = await readImageDimensions(dataUrl);
+    } catch {
+      return;
+    }
     if (!this.#isImageImportCurrent(generation)) return;
     const width = Math.min(320, Math.max(80, dimensions.width));
     const height = Math.max(60, width * (dimensions.height / dimensions.width));
@@ -1284,15 +1290,18 @@ function readDataUrl(file: File): Promise<string> {
 function readImageDimensions(
   dataUrl: string,
 ): Promise<{ width: number; height: number }> {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const image = new Image();
-    image.addEventListener("load", () =>
-      resolve({
-        width: image.naturalWidth || 240,
-        height: image.naturalHeight || 160,
-      }),
+    image.addEventListener("load", () => {
+      if (image.naturalWidth > 0 && image.naturalHeight > 0) {
+        resolve({ width: image.naturalWidth, height: image.naturalHeight });
+      } else {
+        reject(new Error("The image has no decodable dimensions."));
+      }
+    });
+    image.addEventListener("error", () =>
+      reject(new Error("The image could not be decoded.")),
     );
-    image.addEventListener("error", () => resolve({ width: 240, height: 160 }));
     image.src = dataUrl;
   });
 }

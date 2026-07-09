@@ -8,6 +8,7 @@ afterEach(() => {
   instance?.destroy();
   instance = undefined;
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
   localStorage.clear();
   Object.defineProperty(window, "innerWidth", {
     configurable: true,
@@ -332,6 +333,51 @@ describe("scene interactions", () => {
     pendingReader?.onload?.(
       new ProgressEvent("load") as ProgressEvent<FileReader>,
     );
+
+    await vi.waitFor(() => {
+      expect(
+        svg?.querySelectorAll('[data-annotation-type="image"]'),
+      ).toHaveLength(0);
+    });
+  });
+
+  it("rejects image files that the browser cannot decode", async () => {
+    instance = init();
+    instance.open();
+    const shadow = document.getElementById(DRAWOVER_HOST_ID)?.shadowRoot;
+    const svg = shadow?.querySelector<SVGSVGElement>('[data-layer="scene"]');
+    shadow
+      ?.querySelector<HTMLButtonElement>('button[data-mode="scene"]')
+      ?.click();
+    vi.spyOn(FileReader.prototype, "readAsDataURL").mockImplementation(
+      function (this: FileReader) {
+        Object.defineProperty(this, "result", {
+          configurable: true,
+          value: "data:image/png;base64,invalid",
+        });
+        this.dispatchEvent(new ProgressEvent("load"));
+      },
+    );
+    class BrokenImage extends EventTarget {
+      readonly naturalHeight = 0;
+      readonly naturalWidth = 0;
+
+      set src(_value: string) {
+        this.dispatchEvent(new Event("error"));
+      }
+    }
+    vi.stubGlobal("Image", BrokenImage);
+    const pasteEvent = new Event("paste", {
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+    }) as ClipboardEvent;
+    Object.defineProperty(pasteEvent, "clipboardData", {
+      value: {
+        files: [new File(["broken"], "broken.png", { type: "image/png" })],
+      },
+    });
+    document.dispatchEvent(pasteEvent);
 
     await vi.waitFor(() => {
       expect(
