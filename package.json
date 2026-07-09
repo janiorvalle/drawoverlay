@@ -8,16 +8,16 @@
   },
   "scripts": {
     "build": "pnpm -r --workspace-concurrency=1 build",
-    "typecheck": "pnpm -r typecheck",
+    "typecheck": "pnpm --filter drawover build && pnpm -r typecheck",
     "lint": "eslint . && prettier --check . && node scripts/verify-architecture.mjs",
     "test": "vitest run",
-    "test:e2e": "playwright test",
-    "test:prod-strip": "node scripts/verify-prod-strip.mjs",
-    "size": "size-limit",
-    "test:pack": "node scripts/verify-pack.mjs",
+    "test:e2e": "pnpm --filter drawover build && playwright test",
+    "test:prod-strip": "pnpm --filter drawover build && node scripts/verify-prod-strip.mjs",
+    "size": "pnpm --filter drawover build && size-limit",
+    "test:pack": "pnpm --filter drawover build && node scripts/verify-pack.mjs",
     "verify:architecture": "node scripts/verify-architecture.mjs",
     "verify": "pnpm build && pnpm typecheck && pnpm lint && pnpm test && pnpm test:e2e && pnpm test:prod-strip && pnpm size && pnpm test:pack",
-    "dev": "pnpm --filter @drawover/playground dev",
+    "dev": "pnpm --filter drawover build && pnpm --filter @drawover/playground dev",
     "prepare": "node scripts/install-hooks.mjs"
   },
   "devDependencies": {

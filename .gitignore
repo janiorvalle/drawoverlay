@@ -7,7 +7,6 @@ reviews/
 # Secrets and environment files (D11)
 .env
 .env.*
-!.env.example
 
 # Dependencies and generated output
 node_modules/

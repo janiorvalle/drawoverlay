@@ -4,7 +4,10 @@ import { extname, join, relative } from "node:path";
 const root = new URL("../packages/drawover/src/", import.meta.url);
 const allowedCoordinateFile = "coordinates.ts";
 const forbidden = /\b(?:scrollX|scrollY|pageXOffset|pageYOffset)\b/;
+const forbiddenNetwork =
+  /\b(?:fetch|XMLHttpRequest|WebSocket|EventSource|sendBeacon)\b/;
 const violations = [];
+const networkViolations = [];
 
 async function visit(directory) {
   for (const entry of await readdir(directory, { withFileTypes: true })) {
@@ -14,12 +17,21 @@ async function visit(directory) {
       continue;
     }
 
-    if (extname(entry.name) !== ".ts" || entry.name === allowedCoordinateFile) {
+    if (
+      extname(entry.name) !== ".ts" ||
+      entry.name.endsWith(".test.ts") ||
+      entry.name.endsWith(".spec.ts") ||
+      entry.name.endsWith(".fixture.ts")
+    ) {
       continue;
     }
 
-    if (forbidden.test(await readFile(path, "utf8"))) {
+    const source = await readFile(path, "utf8");
+    if (entry.name !== allowedCoordinateFile && forbidden.test(source)) {
       violations.push(relative(root.pathname, path));
+    }
+    if (forbiddenNetwork.test(source)) {
+      networkViolations.push(relative(root.pathname, path));
     }
   }
 }
@@ -29,6 +41,29 @@ await visit(root.pathname);
 if (violations.length > 0) {
   throw new Error(
     `Viewport/document conversion escaped coordinates.ts: ${violations.join(", ")}`,
+  );
+}
+
+if (networkViolations.length > 0) {
+  throw new Error(
+    `Runtime network primitive found: ${networkViolations.join(", ")}`,
+  );
+}
+
+const packageJson = JSON.parse(
+  await readFile(
+    new URL("../packages/drawover/package.json", import.meta.url),
+    "utf8",
+  ),
+);
+const allowedRuntimeDependencies = new Set(["html-to-image"]);
+const unexpectedDependencies = Object.keys(
+  packageJson.dependencies ?? {},
+).filter((name) => !allowedRuntimeDependencies.has(name));
+
+if (unexpectedDependencies.length > 0) {
+  throw new Error(
+    `Unexpected runtime dependencies: ${unexpectedDependencies.join(", ")}`,
   );
 }
 

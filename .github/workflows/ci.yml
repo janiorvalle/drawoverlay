@@ -75,7 +75,7 @@ jobs:
         with:
           fail-on-severity: moderate
           warn-only: false
-          allow-dependencies-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC
+          allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC
 
   secret-scan:
     name: Secret scan

@@ -16,7 +16,9 @@ export interface SceneTransaction {
 
 /**
  * Hub contract for scene state. Every mutation is transactional; undo and redo
- * belong here rather than in renderers or interaction state machines.
+ * belong here rather than in renderers or interaction state machines. A
+ * transaction commits atomically as one history entry and one notification, or
+ * rolls back entirely when its callback throws.
  */
 export interface SceneStore {
   getSnapshot(): SceneSnapshot;
