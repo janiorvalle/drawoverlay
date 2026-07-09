@@ -122,6 +122,14 @@ describe("composited PNG output", () => {
 
   it("translates viewport-rendered annotations into a full-page SVG", async () => {
     const harness = createHarness();
+    const offscreen = document.createElementNS(
+      "http://www.w3.org/2000/svg",
+      "rect",
+    );
+    offscreen.dataset.offscreen = "true";
+    offscreen.setAttribute("y", "-200");
+    offscreen.setAttribute("height", "20");
+    harness.svg.append(offscreen);
     Object.defineProperty(window, "scrollY", {
       configurable: true,
       value: 400,
@@ -154,6 +162,11 @@ describe("composited PNG output", () => {
         ?.querySelector('[data-export-scene="true"]')
         ?.getAttribute("transform"),
     ).toBe("translate(10 410)");
+    const source = exported?.querySelector('svg[data-export-source="true"]');
+    expect(source?.getAttribute("overflow")).toBe("visible");
+    expect(
+      source?.querySelector('[data-offscreen="true"]')?.getAttribute("y"),
+    ).toBe("-200");
   });
 
   it("excludes the Shadow DOM overlay host from the page capture", async () => {

@@ -152,6 +152,7 @@ function createExportSvg(
   source.setAttribute("y", "0");
   source.setAttribute("width", String(Math.max(options.sourceWidth, 1)));
   source.setAttribute("height", String(Math.max(options.sourceHeight, 1)));
+  source.setAttribute("overflow", "visible");
   const exported = document.createElementNS(
     "http://www.w3.org/2000/svg",
     "svg",
