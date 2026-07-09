@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { NoteAnnotation } from "../contracts/index.js";
+import type { NoteAnnotation, RectAnnotation } from "../contracts/index.js";
 import { createSceneStore } from "./store.js";
 
 const firstNote = note("note-1", "First");
@@ -43,6 +43,38 @@ describe("scene store", () => {
     store.redo();
     expect(store.getSnapshot().annotations).toEqual([firstNote]);
   });
+
+  it("moves multiple annotations as one undoable transaction", () => {
+    const first = rectangle("rect-1", 10);
+    const second = rectangle("rect-2", 120);
+    const store = createSceneStore([first, second]);
+
+    store.transaction("Move selection", (transaction) => {
+      transaction.update(first.id, (current) => ({
+        ...current,
+        geometry: { ...current.geometry, x: 30 },
+      }));
+      transaction.update(second.id, (current) => ({
+        ...current,
+        geometry: { ...current.geometry, x: 140 },
+      }));
+    });
+
+    expect(store.getById(first.id)?.geometry.x).toBe(30);
+    expect(store.getById(second.id)?.geometry.x).toBe(140);
+    store.undo();
+    expect(store.getById(first.id)?.geometry.x).toBe(10);
+    expect(store.getById(second.id)?.geometry.x).toBe(120);
+  });
+
+  it("returns snapshots that cannot mutate stored annotations", () => {
+    const store = createSceneStore([rectangle("rect-1", 10)]);
+    const snapshot = store.getSnapshot();
+    const annotation = snapshot.annotations[0];
+    if (annotation) annotation.geometry.x = 999;
+
+    expect(store.getById("rect-1")?.geometry.x).toBe(10);
+  });
 });
 
 function note(id: string, text: string): NoteAnnotation {
@@ -53,5 +85,18 @@ function note(id: string, text: string): NoteAnnotation {
     z: 0,
     rotation: 0,
     text,
+  };
+}
+
+function rectangle(id: string, x: number): RectAnnotation {
+  return {
+    id,
+    type: "rect",
+    geometry: { x, y: 20, width: 80, height: 50 },
+    z: 1,
+    rotation: 0,
+    stroke: "#e5484d",
+    fill: "transparent",
+    strokeWidth: 2,
   };
 }

@@ -4,6 +4,7 @@ import {
   type DrawoverInstance,
   type DrawoverOptions,
 } from "./shell/shell.js";
+import { createSceneEditor, type SceneEditor } from "./scene/editor.js";
 import { createElementTargetingController } from "./targeting/controller.js";
 import { bindScenePersistence } from "./persistence/persistence.js";
 import { createSceneStore } from "./scene/store.js";
@@ -64,10 +65,22 @@ export function init(options: DrawoverOptions = {}): DrawoverInstance {
     },
   });
   const host = document.getElementById(DRAWOVER_HOST_ID);
-  if (!host) {
+  const shadow = host?.shadowRoot;
+  const sceneLayer = shadow?.querySelector<SVGSVGElement>(
+    '[data-layer="scene"]',
+  );
+  const toolbar = shadow?.querySelector<HTMLElement>(".toolbar");
+  if (!host || !shadow || !sceneLayer || !toolbar) {
     shell.destroy();
-    throw new Error("Drawover host was not mounted.");
+    throw new Error("Drawover scene could not attach to the shell.");
   }
+  const sceneEditor: SceneEditor = createSceneEditor({
+    host,
+    sceneLayer,
+    shadow,
+    store,
+    toolbar,
+  });
   const targeting = createElementTargetingController(host);
   let destroyed = false;
   activeInstance = {
@@ -76,6 +89,7 @@ export function init(options: DrawoverOptions = {}): DrawoverInstance {
       if (destroyed) return;
       destroyed = true;
       targeting.destroy();
+      sceneEditor.destroy();
       shell.destroy();
     },
   };

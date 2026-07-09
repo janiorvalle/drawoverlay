@@ -1,9 +1,10 @@
 import { expect, test } from "@playwright/test";
+import { openPlayground } from "./playground.js";
 
 test("trigger and hotkey toggle the open Shadow DOM shell", async ({
   page,
 }) => {
-  await page.goto("/");
+  await openPlayground(page);
   const host = page.locator("#drawover-root");
   const trigger = host.locator(".trigger");
   const toolbar = host.locator(".toolbar");
@@ -22,7 +23,7 @@ test("trigger and hotkey toggle the open Shadow DOM shell", async ({
 test("shell mode exclusively arbitrates scene pointer events", async ({
   page,
 }) => {
-  await page.goto("/");
+  await openPlayground(page);
   const host = page.locator("#drawover-root");
   await host.locator(".trigger").click();
   const scene = host.locator('[data-layer="scene"]');
@@ -37,7 +38,7 @@ test("shell mode exclusively arbitrates scene pointer events", async ({
 });
 
 test("hostile host CSS does not break the shell", async ({ page }) => {
-  await page.goto("/?hostile");
+  await openPlayground(page, { hostile: true });
   const host = page.locator("#drawover-root");
   await host.locator(".trigger").click();
 
@@ -49,7 +50,7 @@ test("hostile host CSS does not break the shell", async ({ page }) => {
 test("mobile toolbar remains inside the viewport without overlap", async ({
   page,
 }) => {
-  await page.goto("/");
+  await openPlayground(page);
   const host = page.locator("#drawover-root");
   const trigger = host.locator(".trigger");
   const toolbar = host.locator(".toolbar");

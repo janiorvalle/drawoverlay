@@ -1,4 +1,4 @@
-import { viewportRectToDocument } from "../coordinates.js";
+import { getScrollOffset, viewportRectToDocument } from "../coordinates.js";
 
 interface ScreenshotLibrary {
   toCanvas(
@@ -44,8 +44,19 @@ export async function exportCompositedPng(
   const pixelRatio = options.pixelRatio ?? window.devicePixelRatio;
   const width = Math.max(page.scrollWidth, page.clientWidth, 1);
   const height = Math.max(page.scrollHeight, page.clientHeight, 1);
+  const pageBounds = viewportRectToDocument(page.getBoundingClientRect());
+  const scroll = getScrollOffset();
+  const svgBounds = options.annotationSvg.getBoundingClientRect();
   const root = options.annotationSvg.getRootNode();
   const overlayHost = root instanceof ShadowRoot ? root.host : undefined;
+  const exportSvg = createExportSvg(options.annotationSvg, {
+    height,
+    offsetX: svgBounds.left + scroll.x - pageBounds.x,
+    offsetY: svgBounds.top + scroll.y - pageBounds.y,
+    sourceHeight: svgBounds.height,
+    sourceWidth: svgBounds.width,
+    width,
+  });
 
   let library: ScreenshotLibrary;
   try {
@@ -74,7 +85,7 @@ export async function exportCompositedPng(
 
   let annotationImage: CanvasImageSource;
   try {
-    annotationImage = await dependencies.loadSvgImage(options.annotationSvg);
+    annotationImage = await dependencies.loadSvgImage(exportSvg);
   } catch (error) {
     throw pngError(
       "Could not render the annotation SVG for PNG export.",
@@ -85,18 +96,9 @@ export async function exportCompositedPng(
   const context = canvas.getContext("2d");
   if (!context) throw new Error("Could not create the PNG canvas context.");
 
-  const viewportBounds = options.annotationSvg.getBoundingClientRect();
-  const documentBounds = viewportRectToDocument(viewportBounds);
-  const pageBounds = viewportRectToDocument(page.getBoundingClientRect());
   const scaleX = canvas.width / width;
   const scaleY = canvas.height / height;
-  context.drawImage(
-    annotationImage,
-    (documentBounds.x - pageBounds.x) * scaleX,
-    (documentBounds.y - pageBounds.y) * scaleY,
-    documentBounds.width * scaleX,
-    documentBounds.height * scaleY,
-  );
+  context.drawImage(annotationImage, 0, 0, width * scaleX, height * scaleY);
 
   try {
     return await dependencies.encodePng(canvas);
@@ -113,9 +115,11 @@ function hasRenderableSource(node: Node): boolean {
 async function loadSvgImage(svg: SVGSVGElement): Promise<HTMLImageElement> {
   const clone = svg.cloneNode(true) as SVGSVGElement;
   const bounds = svg.getBoundingClientRect();
+  const width = Number(svg.getAttribute("width")) || bounds.width;
+  const height = Number(svg.getAttribute("height")) || bounds.height;
   clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-  clone.setAttribute("width", String(Math.max(bounds.width, 1)));
-  clone.setAttribute("height", String(Math.max(bounds.height, 1)));
+  clone.setAttribute("width", String(Math.max(width, 1)));
+  clone.setAttribute("height", String(Math.max(height, 1)));
   const source = new XMLSerializer().serializeToString(clone);
   const image = new Image();
 
@@ -126,6 +130,53 @@ async function loadSvgImage(svg: SVGSVGElement): Promise<HTMLImageElement> {
     image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(source)}`;
   });
   return image;
+}
+
+function createExportSvg(
+  svg: SVGSVGElement,
+  options: {
+    height: number;
+    offsetX: number;
+    offsetY: number;
+    sourceHeight: number;
+    sourceWidth: number;
+    width: number;
+  },
+): SVGSVGElement {
+  const source = svg.cloneNode(true) as SVGSVGElement;
+  for (const element of source.querySelectorAll('[data-scene-ui="true"]')) {
+    element.remove();
+  }
+  source.dataset.exportSource = "true";
+  source.setAttribute("x", "0");
+  source.setAttribute("y", "0");
+  source.setAttribute("width", String(Math.max(options.sourceWidth, 1)));
+  source.setAttribute("height", String(Math.max(options.sourceHeight, 1)));
+  source.setAttribute("overflow", "visible");
+  const exported = document.createElementNS(
+    "http://www.w3.org/2000/svg",
+    "svg",
+  );
+  const translated = document.createElementNS(
+    "http://www.w3.org/2000/svg",
+    "g",
+  );
+  translated.dataset.exportScene = "true";
+  translated.setAttribute(
+    "transform",
+    `translate(${String(options.offsetX)} ${String(options.offsetY)})`,
+  );
+  translated.append(source);
+  exported.append(translated);
+  exported.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+  exported.setAttribute("width", String(Math.max(options.width, 1)));
+  exported.setAttribute("height", String(Math.max(options.height, 1)));
+  exported.setAttribute(
+    "viewBox",
+    `0 0 ${String(Math.max(options.width, 1))} ${String(Math.max(options.height, 1))}`,
+  );
+  exported.setAttribute("preserveAspectRatio", "none");
+  return exported;
 }
 
 async function encodePng(canvas: HTMLCanvasElement): Promise<Blob> {
