@@ -41,7 +41,7 @@ great bug report — paste it into the issue.
 
 A couple of PR types we'll close without much ceremony: refactor-only PRs
 (moving code around without changing behavior) and drive-by style changes.
-If you think a refactor is genuinely needed, open a Discussion first.
+If you think a refactor is genuinely needed, open an issue first.
 
 ## AI-assisted contributions
 
