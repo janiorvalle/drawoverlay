@@ -1,16 +1,16 @@
-# drawover
+# drawoverlay
 
 Your AI agent just finished some UI work. Now you're looking at the screen,
 typing out "the button in the top right, no, the other one" — or taking a
 screenshot, opening an image editor, and drawing arrows on it.
 
-drawover is a dev-only overlay for your own app. Toggle it, click the elements you
+drawoverlay is a dev-only overlay for your own app. Toggle it, click the elements you
 have feedback on or even draw the UI that doesn't exist yet, then hit Copy. You get a
 structured Markdown review plus an annotated screenshot on your clipboard —
 precise enough that an agent can act on it without guessing which button you
 meant.
 
-<img src="https://github.com/janiorvalle/drawover/raw/main/docs/demo.gif" alt="Seven-second demo: drawover opens over a checkout page, pins a comment on the Place order button, draws a rectangle over the order summary, and copies the review as Markdown">
+<img src="https://github.com/janiorvalle/drawoverlay/raw/main/docs/demo.gif" alt="Seven-second demo: drawoverlay opens over a checkout page, pins a comment on the Place order button, draws a rectangle over the order summary, and copies the review as Markdown">
 
 It runs entirely in the browser: no accounts, no telemetry, no server,
 nothing stored outside your own `localStorage`. Nothing you review ever
@@ -21,7 +21,7 @@ leaves your machine.
 1. Open your app in dev, hit `Alt+Shift+D` (`⌥⇧D` on Mac) or click the
    trigger button in the corner.
 2. **Comment** mode: click elements to pin them, add comments as needed.
-   drawover captures the selector, the accessible facts, and the React/Vue
+   drawoverlay captures the selector, the accessible facts, and the React/Vue
    component name when available.
 3. **Draw** mode: rectangles, arrows, text, and images for the UI you're
    proposing.
@@ -30,24 +30,24 @@ leaves your machine.
 ## Install
 
 ```sh
-npm install -D drawover
+npm install -D drawoverlay
 # or
-pnpm add -D drawover
+pnpm add -D drawoverlay
 # or
-yarn add -D drawover
+yarn add -D drawoverlay
 # or
-bun add -D drawover
+bun add -D drawoverlay
 ```
 
 Keep the import behind an environment guard so bundlers strip the package
-from production builds. drawover is never included in a production bundle
+from production builds. drawoverlay is never included in a production bundle
 when set up this way.
 
 ### Vite
 
 ```ts
 if (import.meta.env.DEV || import.meta.env.VITE_DRAWOVER === "true") {
-  import("drawover").then(({ init }) => init());
+  import("drawoverlay").then(({ init }) => init());
 }
 ```
 
@@ -62,7 +62,7 @@ if (
   process.env.NODE_ENV !== "production" ||
   process.env.NEXT_PUBLIC_DRAWOVER === "true"
 ) {
-  void import("drawover").then(({ init }) => init());
+  void import("drawoverlay").then(({ init }) => init());
 }
 ```
 
@@ -80,7 +80,7 @@ export function DrawoverBootstrap() {
       process.env.NODE_ENV !== "production" ||
       process.env.NEXT_PUBLIC_DRAWOVER === "true"
     ) {
-      void import("drawover").then(({ init }) => init());
+      void import("drawoverlay").then(({ init }) => init());
     }
   }, []);
 
@@ -94,7 +94,7 @@ export function DrawoverBootstrap() {
 declare const __DRAWOVER_PREVIEW__: boolean;
 
 if (process.env.NODE_ENV !== "production" || __DRAWOVER_PREVIEW__) {
-  import("drawover").then(({ init }) => init());
+  import("drawoverlay").then(({ init }) => init());
 }
 ```
 
@@ -104,17 +104,17 @@ in production unless a preview environment explicitly opts in.
 ## API
 
 ```ts
-const drawover = init({
+const drawoverlay = init({
   hotkey: "alt+shift+d",
   position: "bottom-right",
   theme: "auto",
 });
 
-drawover.open();
-drawover.close();
-await drawover.copy(); // same as the Copy Markdown button
-drawover.clear();
-drawover.destroy();
+drawoverlay.open();
+drawoverlay.close();
+await drawoverlay.copy(); // same as the Copy Markdown button
+drawoverlay.clear();
+drawoverlay.destroy();
 ```
 
 `position` accepts `bottom-right`, `bottom-left`, `top-right`, or `top-left`;
@@ -159,7 +159,7 @@ The Markdown looks like this — badge numbers in the screenshot match the
 headings, so you and the agent are always pointing at the same thing:
 
 ```markdown
-# UI Review — /checkout (drawover)
+# UI Review — /checkout (drawoverlay)
 
 ## Element comments
 
@@ -182,7 +182,7 @@ status says so plainly; Copy Markdown is never affected.
 
 | Shortcut                           | Action                          |
 | ---------------------------------- | ------------------------------- |
-| `Alt+Shift+D` (`⌥⇧D` on Mac)       | Toggle drawover                 |
+| `Alt+Shift+D` (`⌥⇧D` on Mac)       | Toggle drawoverlay              |
 | `Escape`                           | Cancel the current tool or edit |
 | `Delete` / `Backspace`             | Delete the selection            |
 | `Cmd/Ctrl+Z`                       | Undo                            |
@@ -200,19 +200,19 @@ status says so plainly; Copy Markdown is never affected.
 Short version: nothing leaves your machine.
 
 No telemetry, no websockets, no remote fonts or CDN assets, no server
-component. The one time drawover touches the network is when you press Copy
+component. The one time drawoverlay touches the network is when you press Copy
 image: it re-fetches images your page already displays — cache-first and
 time-bounded — so it can bake them into the screenshot. It never requests a
 URL your page doesn't reference, and it never sends data anywhere. Review
 data stays in the current origin's `localStorage` until you clear it. The overlay renders in an open Shadow DOM
-so your app's styles and drawover's can't touch each other, and it doesn't
+so your app's styles and drawoverlay's can't touch each other, and it doesn't
 mutate your page beyond its single mount element and a temporary hover
 highlight. Keep the dynamic import behind the environment guard shown above
-and production builds contain zero drawover bytes — CI here verifies that on
+and production builds contain zero drawoverlay bytes — CI here verifies that on
 every change.
 
 ## Feedback
 
-If drawover produces a bad selector, a useless spatial description, or a
+If drawoverlay produces a bad selector, a useless spatial description, or a
 broken screenshot on your app, open an issue and paste the copied output —
 it's self-contained, so that's usually all we need to reproduce and fix it.

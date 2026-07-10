@@ -22,7 +22,7 @@ jobs:
     name: Scorecard analysis
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    if: github.repository == 'janiorvalle/drawover'
+    if: github.repository == 'janiorvalle/drawoverlay'
     permissions:
       contents: read # checkout
       security-events: write # SARIF upload to code scanning

@@ -2,7 +2,7 @@
 const config = {
   output: "export",
   reactStrictMode: true,
-  transpilePackages: ["drawover"],
+  transpilePackages: ["drawoverlay"],
 };
 
 export default config;

@@ -5,7 +5,7 @@ if (
   process.env.NODE_ENV !== "production" ||
   process.env.NEXT_PUBLIC_DRAWOVER === "true"
 ) {
-  void import("drawover").then(({ init }) => init());
+  void import("drawoverlay").then(({ init }) => init());
 }
 
 export {};

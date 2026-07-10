@@ -71,7 +71,7 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/setup
       # Typed lint resolves the published package through its built types.
-      - run: pnpm --filter drawover build
+      - run: pnpm --filter drawoverlay build
       - run: pnpm lint
 
   workflow-lint:

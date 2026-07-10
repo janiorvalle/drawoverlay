@@ -1,11 +1,11 @@
 {
-  "name": "drawover",
+  "name": "drawoverlay",
   "version": "0.0.1",
   "description": "A development overlay for precise UI review",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/janiorvalle/drawover.git"
+    "url": "git+https://github.com/janiorvalle/drawoverlay.git"
   },
   "publishConfig": {
     "access": "public",

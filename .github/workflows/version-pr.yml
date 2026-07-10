@@ -21,7 +21,7 @@ jobs:
     name: Open or update the version PR
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    if: github.repository == 'janiorvalle/drawover'
+    if: github.repository == 'janiorvalle/drawoverlay'
     permissions:
       contents: write # the changesets action pushes the version branch
       pull-requests: write # ...and opens the version PR
