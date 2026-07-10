@@ -395,26 +395,46 @@ button svg {
 
 .note-form {
   display: grid;
-  padding: 8px;
+  padding: 10px;
   border-top: 1px solid var(--dv-border);
-  grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px;
 }
 
 .note-form textarea {
-  min-height: 48px;
+  min-height: 54px;
   padding: 7px 8px;
 }
 
-.note-add {
-  min-width: 72px;
+.note-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.note-actions button {
+  height: 28px;
+  min-width: 64px;
   padding: 0 10px;
+  border: 1px solid var(--dv-border);
+  color: var(--dv-muted);
+}
+
+.note-actions button:hover {
+  background: var(--dv-accent-soft);
+  color: var(--dv-text);
+}
+
+.note-actions .note-add,
+.note-actions button.note-add {
+  border-color: transparent;
   background: var(--dv-accent);
   color: var(--dv-accent-text);
   font-weight: 600;
 }
 
-.note-add:hover {
+.note-actions button.note-add:hover {
+  background: var(--dv-accent);
+  color: var(--dv-accent-text);
   filter: brightness(1.08);
 }
 

@@ -54,11 +54,24 @@ export function createGeneralNotesPanel(
   draft.rows = 2;
   draft.placeholder = "Add a page-level note";
   draft.setAttribute("aria-label", "New general note");
+  const actions = document.createElement("div");
+  actions.className = "note-actions";
+  const cancel = document.createElement("button");
+  cancel.type = "button";
+  cancel.className = "note-cancel";
+  cancel.textContent = "Cancel";
+  cancel.setAttribute("aria-label", "Cancel general note");
+  cancel.addEventListener("click", () => {
+    draft.value = "";
+    draft.focus();
+  });
   const add = document.createElement("button");
   add.type = "submit";
   add.className = "note-add";
-  add.textContent = "Add note";
-  form.append(draft, add);
+  add.textContent = "Save";
+  add.setAttribute("aria-label", "Save general note");
+  actions.append(cancel, add);
+  form.append(draft, actions);
   panel.append(header, list, form);
 
   const render = (): void => {

@@ -1,5 +1,4 @@
 import AxeBuilder from "@axe-core/playwright";
-import { readFile } from "node:fs/promises";
 import { expect, type Locator, type Page, test } from "@playwright/test";
 
 test.beforeEach(async ({ context }) => {
@@ -36,27 +35,18 @@ test("annotates, edits, copies, reloads, and clears a mixed review", async ({
   await host
     .getByRole("textbox", { name: "New general note" })
     .fill("Check mobile spacing");
-  await host.getByRole("button", { name: "Add note" }).click();
+  await host.getByRole("button", { name: "Save general note" }).click();
   await host.getByRole("button", { name: "Close general notes" }).click();
 
-  await host.getByRole("button", { name: "Copy review as Markdown" }).click();
-  await expect(host.locator(".command-status")).toHaveText("Markdown copied");
+  await host.getByRole("button", { name: "Copy review" }).click();
+  await expect(host.locator(".command-status")).toHaveText(
+    "Copied review + image",
+  );
   const markdown = await page.evaluate(() => navigator.clipboard.readText());
   expect(markdown).toContain("## Element comments");
   expect(markdown).toContain('### [1] "Disable until validation passes"');
   expect(markdown).toContain("### [2] Rectangle");
   expect(markdown).toContain('- [3] "Check mobile spacing"');
-
-  await host.getByRole("button", { name: "Copy review as JSON" }).click();
-  await expect(host.locator(".command-status")).toHaveText("JSON copied");
-  const serialized = JSON.parse(
-    await page.evaluate(() => navigator.clipboard.readText()),
-  ) as { annotations: { type: string }[] };
-  expect(serialized.annotations.map(({ type }) => type)).toEqual([
-    "element-pin",
-    "rect",
-    "note",
-  ]);
 
   await pin.dispatchEvent("dblclick");
   const commentEditor = host.getByRole("textbox", { name: "Element comment" });
@@ -93,7 +83,7 @@ test("annotates, edits, copies, reloads, and clears a mixed review", async ({
   ).toHaveCount(0);
 });
 
-test("exports a composited PNG containing host pixels and annotation pixels", async ({
+test("one-press copy puts Markdown and a composited PNG on the clipboard", async ({
   page,
 }) => {
   let exportAssetRequests = 0;
@@ -178,19 +168,34 @@ test("exports a composited PNG containing host pixels and annotation pixels", as
   if (!submitBounds) throw new Error("Checkout button was not visible.");
   const pixelRatio = await page.evaluate(() => window.devicePixelRatio);
 
-  const downloadPromise = page.waitForEvent("download");
-  await host.getByRole("button", { name: "Export composited PNG" }).click();
-  const download = await downloadPromise;
+  await host.getByRole("button", { name: "Copy review" }).click();
+  await expect(host.locator(".command-status")).toHaveText(
+    "Copied review + image",
+  );
   expect(exportAssetRequests).toBe(0);
   await expect(page.locator("body")).toHaveAttribute(
     "data-capture-connections",
     "1",
   );
-  expect(download.suggestedFilename()).toBe("drawover-review.png");
-  const path = await download.path();
-  expect(path).not.toBeNull();
-  if (!path) return;
-  const png = await readFile(path);
+  const pngBase64 = await page.evaluate(async () => {
+    const items = await navigator.clipboard.read();
+    for (const item of items) {
+      if (!item.types.includes("image/png")) continue;
+      const blob = await item.getType("image/png");
+      const buffer = await blob.arrayBuffer();
+      let binary = "";
+      for (const byte of new Uint8Array(buffer)) {
+        binary += String.fromCharCode(byte);
+      }
+      return btoa(binary);
+    }
+    throw new Error("Clipboard has no image/png item.");
+  });
+  const clipboardText = await page.evaluate(() =>
+    navigator.clipboard.readText(),
+  );
+  expect(clipboardText).toContain("## Drawings");
+  const png = Buffer.from(pngBase64, "base64");
   expect([...png.subarray(0, 8)]).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
   expect(png.byteLength).toBeGreaterThan(2_000);
 

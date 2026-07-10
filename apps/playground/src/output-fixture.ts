@@ -1,9 +1,9 @@
 import type { PageContext, SceneSnapshot } from "drawover";
 
 interface OutputApi {
-  copyJson: typeof import("drawover").copyJson;
-  copyMarkdown: typeof import("drawover").copyMarkdown;
+  copyReview: typeof import("drawover").copyReview;
   exportCompositedPng: typeof import("drawover").exportCompositedPng;
+  serializeReview: typeof import("drawover").serializeReview;
   viewportRectToDocument: typeof import("drawover").viewportRectToDocument;
 }
 
@@ -36,16 +36,21 @@ export function installOutputFixture(api: OutputApi): void {
     capturedAt: new Date().toISOString(),
   });
 
-  fixture.copyMarkdown.addEventListener("click", () => {
+  fixture.copyReview.addEventListener("click", () => {
     void run(fixture, async () => {
-      await api.copyMarkdown(scene, pageContext());
-      fixture.status.textContent = "Markdown copied";
-    });
-  });
-  fixture.copyJson.addEventListener("click", () => {
-    void run(fixture, async () => {
-      await api.copyJson(scene, pageContext());
-      fixture.status.textContent = "JSON copied";
+      const result = await api.copyReview(
+        api.serializeReview(scene, pageContext()),
+        () =>
+          api.exportCompositedPng({
+            annotationSvg,
+            backgroundColor: "#eef1f5",
+            page: document.body,
+          }),
+      );
+      fixture.status.textContent =
+        result === "markdown+png"
+          ? "Copied review + image"
+          : "Copied review (Markdown only)";
     });
   });
   fixture.exportPng.addEventListener("click", () => {
@@ -223,8 +228,7 @@ function svgElement<K extends keyof SVGElementTagNameMap>(
 }
 
 function renderFixturePanel(): {
-  copyJson: HTMLButtonElement;
-  copyMarkdown: HTMLButtonElement;
+  copyReview: HTMLButtonElement;
   download: HTMLAnchorElement;
   exportPng: HTMLButtonElement;
   preview: HTMLImageElement;
@@ -236,9 +240,8 @@ function renderFixturePanel(): {
   panel.innerHTML = `
     <h2>Output fixture</h2>
     <div class="output-actions">
-      <button type="button" data-output="markdown">Copy Markdown</button>
-      <button type="button" data-output="json">Copy JSON</button>
-      <button type="button" data-output="png">Export PNG</button>
+      <button type="button" data-output="review">Copy review</button>
+      <button type="button" data-output="png">Preview PNG</button>
       <a download="drawover-output-fixture.png" hidden>Open PNG</a>
     </div>
     <p class="output-status" role="status">Ready</p>
@@ -255,8 +258,7 @@ function renderFixturePanel(): {
     return element;
   };
   return {
-    copyJson: query('[data-output="json"]') as HTMLButtonElement,
-    copyMarkdown: query('[data-output="markdown"]') as HTMLButtonElement,
+    copyReview: query('[data-output="review"]') as HTMLButtonElement,
     download: query("a[download]") as HTMLAnchorElement,
     exportPng: query('[data-output="png"]') as HTMLButtonElement,
     preview: query(".output-preview") as HTMLImageElement,

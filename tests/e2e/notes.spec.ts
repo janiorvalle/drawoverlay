@@ -76,5 +76,5 @@ test("general notes panel fits desktop and mobile viewports", async ({
 
 async function addNote(host: Locator, text: string): Promise<void> {
   await host.getByRole("textbox", { name: "New general note" }).fill(text);
-  await host.getByRole("button", { name: "Add note" }).click();
+  await host.getByRole("button", { name: "Save general note" }).click();
 }

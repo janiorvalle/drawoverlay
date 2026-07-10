@@ -109,12 +109,16 @@ Undo after reload starts from the restored scene instead of erasing it.
 
 ## Commands
 
-- **Copy** writes the primary Markdown review to the clipboard.
-- **JSON** writes the same versioned scene as JSON.
-- **PNG** downloads a composited full-page PNG with the visible annotations baked
-  in. The screenshot dependency is loaded only when this command runs. Capture
-  never fetches host-page assets, so externally hosted images or web fonts that
-  are not already data/blob resources, video, and host-page SVG may be omitted.
+- **Copy review** puts two representations on the clipboard in a single press:
+  the Markdown review as text, and a composited full-page PNG (your app with
+  the annotations baked in) as an image. Paste into a text field to get the
+  Markdown; paste into an image-accepting target (most agent chats) to get the
+  screenshot — one copy covers both halves of the payload, and the badge
+  numbers in the image match the Markdown headings. The screenshot dependency
+  loads only when this command runs, capture never fetches host-page assets
+  (externally hosted images, video, and host-page SVG may be omitted), and if
+  the browser refuses image clipboard the Markdown still copies with a
+  "Markdown only" status.
 
 Badge numbers use scene order and match the Markdown headings. The Markdown
 structure contains page metadata, element comments, a clearly marked proposed
