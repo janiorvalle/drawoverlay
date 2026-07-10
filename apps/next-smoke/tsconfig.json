@@ -6,6 +6,7 @@
     "types": ["node"]
   },
   "include": [
+    "instrumentation-client.ts",
     "next-env.d.ts",
     ".next/types/**/*.ts",
     "app/**/*.ts",
