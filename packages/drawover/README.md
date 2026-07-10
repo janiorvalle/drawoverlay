@@ -10,6 +10,8 @@ structured Markdown review plus an annotated screenshot on your clipboard —
 precise enough that an agent can act on it without guessing which button you
 meant.
 
+<img src="https://github.com/janiorvalle/drawover/raw/main/docs/demo.gif" alt="Seven-second demo: drawover opens over a checkout page, pins a comment on the Place order button, draws a rectangle over the order summary, and copies the review as Markdown">
+
 It runs entirely in the browser: no accounts, no telemetry, no server,
 nothing stored outside your own `localStorage`. Nothing you review ever
 leaves your machine.
