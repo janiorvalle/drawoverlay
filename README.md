@@ -4,25 +4,26 @@ Your AI agent just finished some UI work. Now you're looking at the screen,
 typing out "the button in the top right, no, the other one" — or taking a
 screenshot, opening an image editor, and drawing arrows on it.
 
-Drawover is a dev-only overlay for your own app. Toggle it, click the elements you
+drawover is a dev-only overlay for your own app. Toggle it, click the elements you
 have feedback on or even draw the UI that doesn't exist yet, then hit Copy. You get a
 structured Markdown review plus an annotated screenshot on your clipboard —
 precise enough that an agent can act on it without guessing which button you
 meant.
 
-It runs entirely in the browser: no accounts, no telemetry, no network
-requests, nothing stored outside your own `localStorage`.
+It runs entirely in the browser: no accounts, no telemetry, no server,
+nothing stored outside your own `localStorage`. Nothing you review ever
+leaves your machine.
 
 ## The loop
 
 1. Open your app in dev, hit `Alt+Shift+D` (`⌥⇧D` on Mac) or click the
    trigger button in the corner.
 2. **Comment** mode: click elements to pin them, add comments as needed.
-   Drawover captures the selector, the accessible facts, and the React/Vue
+   drawover captures the selector, the accessible facts, and the React/Vue
    component name when available.
 3. **Draw** mode: rectangles, arrows, text, and images for the UI you're
    proposing.
-4. **Copy review**, copy the text and image to provide to your agent.
+4. **Copy Markdown** and **Copy image**, then paste both into your agent.
 
 ## Install
 
@@ -37,7 +38,7 @@ bun add -D drawover
 ```
 
 Keep the import behind an environment guard so bundlers strip the package
-from production builds. Drawover is never included in a production bundle
+from production builds. drawover is never included in a production bundle
 when set up this way.
 
 ### Vite
@@ -109,7 +110,7 @@ const drawover = init({
 
 drawover.open();
 drawover.close();
-await drawover.copy(); // same as the Copy review button
+await drawover.copy(); // same as the Copy Markdown button
 drawover.clear();
 drawover.destroy();
 ```
@@ -128,7 +129,10 @@ drawover.destroy();
   rotation, duplicate, delete, nudge, and layer order for your drawings.
 - **Rect** — rectangles with a small color palette and optional fill.
   Double-click one to give it a label.
+- **Ellipse** — same palette, fill, and labels as rectangles, drawn as an
+  ellipse.
 - **Arrow** — straight arrows; select one to move either endpoint.
+- **Line** — straight lines without the arrowhead.
 - **Text** — freestanding text anywhere on the page.
 - **Image** — insert an image from a file, or just paste one while in Draw
   mode. Images stay local as data URLs.
@@ -139,17 +143,15 @@ manipulates instead of drawing again.
 Annotations persist in `localStorage` keyed by origin and path, so they
 survive reloads. **Clear** removes the scene and its stored copy.
 
-## Copy review
+## Copying your review
 
-One press puts two representations on the clipboard: the Markdown review as
-text, and a full-page PNG of your app with the annotations baked in.
+Two buttons, one per representation:
 
-NOTE: Depending on the app you paste this in, the paste behavior changes.
-Text fields take the Markdown, image-accepting targets (most agent chats)
-take the screenshot. You can't force a target's choice — so after a copy the
-toolbar shows **Text** and **Image** chips that re-copy just one flavor. If
-an app grabbed the Markdown when you wanted the screenshot, click **Image**
-and paste again.
+- **Copy Markdown** puts the structured review on the clipboard as text.
+- **Copy image** puts a full-page PNG of your app with the annotations baked
+  in on the clipboard.
+
+Copy and paste each one into your agent — no files to save or open.
 
 The Markdown looks like this — badge numbers in the screenshot match the
 headings, so you and the agent are always pointing at the same thing:
@@ -166,22 +168,19 @@ headings, so you and the agent are always pointing at the same thing:
 ### [2] Rectangle: "Home"
 ```
 
-A couple of capture caveats: the screenshot dependency only loads when you
-press Copy, and capture never fetches host-page assets — so externally
-hosted images, video, and host-page SVG may be missing from the PNG. Layout,
-text, and locally loaded assets come through fine. If the browser refuses
-image clipboard, you still get the Markdown with an honest "Markdown only"
-status.
-
-One tip that saves a round trip: write comments as instructions ("change
-this to X"), not observations ("this is wrong"). The tool nails the _where_;
-the _what_ is on you.
+A couple of capture notes: the screenshot dependency only loads when you
+press Copy image, and the capture re-fetches images your page already shows
+(from cache when possible) so it can bake them into the PNG. Your own
+images, inline SVG, and CSS backgrounds come through fine. Cross-origin
+images need CORS headers from their host — without them they show up blank.
+Video frames don't make it in. If the browser refuses image clipboard, the
+status says so plainly; Copy Markdown is never affected.
 
 ## Keyboard
 
 | Shortcut                           | Action                          |
 | ---------------------------------- | ------------------------------- |
-| `Alt+Shift+D`                      | Toggle Drawover                 |
+| `Alt+Shift+D` (`⌥⇧D` on Mac)       | Toggle drawover                 |
 | `Escape`                           | Cancel the current tool or edit |
 | `Delete` / `Backspace`             | Delete the selection            |
 | `Cmd/Ctrl+Z`                       | Undo                            |
@@ -192,23 +191,26 @@ the _what_ is on you.
 | `[` / `]`                          | Send backward / bring forward   |
 | `Cmd/Ctrl+Shift+[` / `]`           | Send to back / bring to front   |
 | `Shift` while rotating             | Snap to 15 degrees              |
-| `Alt` while dragging               | Duplicate and move              |
+| `Alt/⌥` while dragging             | Duplicate and move              |
 
 ## Security
 
 Short version: nothing leaves your machine.
 
-No telemetry, no network requests, no websockets, no remote fonts or CDN
-assets, no server component. Review data stays in the current origin's
-`localStorage` until you clear it. The overlay renders in an open Shadow DOM
-so your app's styles and Drawover's can't touch each other, and it doesn't
+No telemetry, no websockets, no remote fonts or CDN assets, no server
+component. The one time drawover touches the network is when you press Copy
+image: it re-fetches images your page already displays — cache-first and
+time-bounded — so it can bake them into the screenshot. It never requests a
+URL your page doesn't reference, and it never sends data anywhere. Review
+data stays in the current origin's `localStorage` until you clear it. The overlay renders in an open Shadow DOM
+so your app's styles and drawover's can't touch each other, and it doesn't
 mutate your page beyond its single mount element and a temporary hover
 highlight. Keep the dynamic import behind the environment guard shown above
-and production builds contain zero Drawover bytes — CI here verifies that on
+and production builds contain zero drawover bytes — CI here verifies that on
 every change.
 
 ## Feedback
 
-If Drawover produces a bad selector, a useless spatial description, or a
+If drawover produces a bad selector, a useless spatial description, or a
 broken screenshot on your app, open an issue and paste the copied output —
 it's self-contained, so that's usually all we need to reproduce and fix it.
