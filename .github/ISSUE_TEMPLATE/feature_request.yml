@@ -1,0 +1,22 @@
+name: Feature request
+description: Something drawover should do that it doesn't.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: Describe the review-loop friction you hit, not just the feature. Real scenarios beat abstract ideas.
+      placeholder: When I annotate a page with..., I can't...
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like drawover to do?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What do you do today instead?
