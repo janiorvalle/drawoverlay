@@ -109,5 +109,13 @@
   "dist/targeting/selectors.d.ts.map",
   "dist/targeting/selectors.js",
   "dist/targeting/selectors.js.map",
+  "dist/theme/icons.d.ts",
+  "dist/theme/icons.d.ts.map",
+  "dist/theme/icons.js",
+  "dist/theme/icons.js.map",
+  "dist/theme/tokens.d.ts",
+  "dist/theme/tokens.d.ts.map",
+  "dist/theme/tokens.js",
+  "dist/theme/tokens.js.map",
   "package.json"
 ]

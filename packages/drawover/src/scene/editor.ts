@@ -25,6 +25,8 @@ import {
 import { resolveElementPinPosition } from "./anchoring.js";
 import { SceneRenderer } from "./renderer.js";
 import { sceneStyles } from "./styles.js";
+import { applyIcon } from "../theme/icons.js";
+import { ANNOTATION_COLORS } from "../theme/tokens.js";
 
 export type SceneTool = "arrow" | "image" | "rect" | "select" | "text";
 
@@ -95,7 +97,10 @@ type PointerSession =
   | ResizeSession
   | RotateSession;
 
-const COLORS = ["#e5484d", "#1769e0", "#16805c", "#202936"] as const;
+const COLORS = ANNOTATION_COLORS;
+const APPLE_PLATFORM = /mac|iphone|ipad/i.test(globalThis.navigator.platform);
+const MOD_KEY = APPLE_PLATFORM ? "⌘" : "Ctrl+";
+const SHIFT_KEY = APPLE_PLATFORM ? "⇧" : "Shift+";
 
 export class SceneEditor {
   readonly #host: HTMLElement;
@@ -310,15 +315,17 @@ export class SceneEditor {
     group.className = "scene-tools";
     group.setAttribute("role", "group");
     group.setAttribute("aria-label", "Scene tools");
-    const definitions: readonly [SceneTool, string, string][] = [
-      ["select", "Select", "Select and move annotations"],
-      ["rect", "Rect", "Draw rectangle"],
-      ["arrow", "Arrow", "Draw arrow"],
-      ["text", "Text", "Insert text"],
-      ["image", "Image", "Insert image from file"],
+    const definitions: readonly [SceneTool, string, string, string][] = [
+      ["select", "select", "Select and move annotations", "Select"],
+      ["rect", "rect", "Draw rectangle", "Rectangle"],
+      ["arrow", "arrow", "Draw arrow", "Arrow"],
+      ["text", "text", "Insert text", "Text"],
+      ["image", "image", "Insert image from file", "Image"],
     ];
-    for (const [tool, text, label] of definitions) {
-      const button = createButton(text, label);
+    for (const [tool, iconName, label, tip] of definitions) {
+      const button = createButton("", label);
+      applyIcon(button, iconName);
+      button.dataset.tip = tip;
       button.dataset.tool = tool;
       button.addEventListener("click", () => {
         this.#ensureSceneMode();
@@ -340,13 +347,17 @@ export class SceneEditor {
     group.className = "history-tools";
     group.setAttribute("role", "group");
     group.setAttribute("aria-label", "History");
-    const undo = createButton("<", "Undo");
+    const undo = createButton("", "Undo");
+    applyIcon(undo, "undo");
     undo.dataset.command = "undo";
     undo.title = "Undo";
+    undo.dataset.tip = `Undo · ${MOD_KEY}Z`;
     undo.addEventListener("click", () => this.#undo());
-    const redo = createButton(">", "Redo");
+    const redo = createButton("", "Redo");
+    applyIcon(redo, "redo");
     redo.dataset.command = "redo";
     redo.title = "Redo";
+    redo.dataset.tip = `Redo · ${MOD_KEY}${SHIFT_KEY}Z`;
     redo.addEventListener("click", () => this.#redo());
     group.append(undo, redo);
     return group;
@@ -357,14 +368,21 @@ export class SceneEditor {
     group.className = "z-tools";
     group.setAttribute("role", "group");
     group.setAttribute("aria-label", "Layer order");
-    const definitions: readonly [ZOrderAction, string, string][] = [
-      ["back", "|<", "Send to back"],
-      ["backward", "<", "Send backward"],
-      ["forward", ">", "Bring forward"],
-      ["front", ">|", "Bring to front"],
+    const definitions: readonly [ZOrderAction, string, string, string][] = [
+      ["back", "send-back", "Send to back", `Send to back · ${SHIFT_KEY}[`],
+      ["backward", "send-backward", "Send backward", "Send backward · ["],
+      ["forward", "bring-forward", "Bring forward", "Bring forward · ]"],
+      [
+        "front",
+        "bring-front",
+        "Bring to front",
+        `Bring to front · ${SHIFT_KEY}]`,
+      ],
     ];
-    for (const [action, text, label] of definitions) {
-      const button = createButton(text, label);
+    for (const [action, iconName, label, tip] of definitions) {
+      const button = createButton("", label);
+      applyIcon(button, iconName);
+      button.dataset.tip = tip;
       button.dataset.zOrder = action;
       button.title = label;
       button.addEventListener("click", () => this.#reorder(action));
@@ -387,6 +405,7 @@ export class SceneEditor {
       group.append(button);
     }
     const fill = createButton("Fill", "Toggle rectangle fill");
+    fill.dataset.tip = "Toggle rectangle fill";
     fill.dataset.fillToggle = "true";
     fill.setAttribute("aria-pressed", "true");
     fill.addEventListener("click", () => {

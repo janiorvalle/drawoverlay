@@ -1,3 +1,4 @@
+import { applyIcon } from "../theme/icons.js";
 import type { NoteAnnotation, SceneStore } from "../contracts/index.js";
 
 interface GeneralNotesPanelOptions {
@@ -24,7 +25,8 @@ export function createGeneralNotesPanel(
   const toggle = document.createElement("button");
   toggle.type = "button";
   toggle.className = "command notes-toggle";
-  toggle.textContent = "Notes";
+  applyIcon(toggle, "notes");
+  toggle.dataset.tip = "General notes";
   toggle.setAttribute("aria-label", "Open general notes");
   toggle.setAttribute("aria-expanded", "false");
   toggle.setAttribute("aria-controls", "drawover-general-notes");
@@ -108,7 +110,7 @@ export function createGeneralNotesPanel(
     const remove = document.createElement("button");
     remove.type = "button";
     remove.className = "note-remove";
-    remove.textContent = "×";
+    applyIcon(remove, "close");
     remove.title = "Remove note";
     remove.setAttribute("aria-label", "Remove general note");
     remove.addEventListener("click", () => {

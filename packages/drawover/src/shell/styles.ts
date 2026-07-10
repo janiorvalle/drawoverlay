@@ -14,41 +14,13 @@ export const shellStyles = `
 }
 
 .root {
-  --dv-bg: #ffffff;
-  --dv-text: #172033;
-  --dv-muted: #5e687b;
-  --dv-border: #cfd5df;
-  --dv-accent: #c7353a;
-  --dv-accent-text: #ffffff;
-  --dv-selected: #eaf2ff;
-  --dv-selected-text: #174ea6;
   position: fixed;
   inset: 0;
   pointer-events: none;
   color: var(--dv-text);
-  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  font-size: 13px;
-  line-height: 1.35;
-}
-
-.root[data-theme='dark'] {
-  --dv-bg: #1f2430;
-  --dv-text: #f6f7f9;
-  --dv-muted: #b8c0ce;
-  --dv-border: #454e5e;
-  --dv-selected: #243d62;
-  --dv-selected-text: #d8e8ff;
-}
-
-@media (prefers-color-scheme: dark) {
-  .root[data-theme='auto'] {
-    --dv-bg: #1f2430;
-    --dv-text: #f6f7f9;
-    --dv-muted: #b8c0ce;
-    --dv-border: #454e5e;
-    --dv-selected: #243d62;
-    --dv-selected-text: #d8e8ff;
-  }
+  font-family: var(--dv-font-sans);
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .interaction-layer {
@@ -66,7 +38,7 @@ export const shellStyles = `
   position: fixed;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   pointer-events: auto;
 }
 
@@ -75,7 +47,7 @@ export const shellStyles = `
   min-width: 0;
   flex-direction: column-reverse;
   align-items: flex-end;
-  gap: 8px;
+  gap: 10px;
   pointer-events: auto;
 }
 
@@ -113,18 +85,39 @@ export const shellStyles = `
 
 button {
   appearance: none;
-  border: 1px solid var(--dv-border);
-  border-radius: 6px;
-  background: var(--dv-bg);
+  border: 1px solid transparent;
+  border-radius: var(--dv-radius-inner);
+  background: transparent;
   color: var(--dv-text);
   font: inherit;
   letter-spacing: 0;
   cursor: pointer;
+  transition: background var(--dv-motion-fast), color var(--dv-motion-fast),
+    border-color var(--dv-motion-fast);
 }
 
 button:focus-visible {
-  outline: 3px solid #4c8bf5;
-  outline-offset: 2px;
+  outline: 2px solid var(--dv-focus-ring);
+  outline-offset: 1px;
+}
+
+button svg {
+  display: block;
+  width: 15px;
+  height: 15px;
+}
+
+/* ── surfaces ─────────────────────────────────────── */
+
+.trigger,
+.toolbar,
+.notes-panel {
+  border: 1px solid var(--dv-border);
+  border-radius: var(--dv-radius);
+  background: var(--dv-bg);
+  box-shadow: var(--dv-shadow);
+  backdrop-filter: var(--dv-blur);
+  -webkit-backdrop-filter: var(--dv-blur);
 }
 
 .trigger {
@@ -133,98 +126,178 @@ button:focus-visible {
   width: 40px;
   height: 40px;
   padding: 0;
-  border-color: #aeb6c4;
-  background: var(--dv-accent);
-  color: var(--dv-accent-text);
-  box-shadow: 0 4px 14px rgb(17 24 39 / 22%);
-  font-size: 16px;
-  font-weight: 800;
+  color: var(--dv-accent);
+  transition: transform var(--dv-motion), color var(--dv-motion-fast);
+}
+
+.trigger svg {
+  width: 20px;
+  height: 20px;
+}
+
+.trigger:hover {
+  transform: translateY(-1px);
+  color: var(--dv-text);
 }
 
 .toolbar {
   display: flex;
   min-height: 40px;
-  max-width: min(420px, calc(100vw - 72px));
+  max-width: min(560px, calc(100vw - 72px));
   align-items: center;
-  gap: 8px;
-  padding: 5px;
-  border: 1px solid var(--dv-border);
-  border-radius: 8px;
-  background: var(--dv-bg);
-  box-shadow: 0 8px 24px rgb(17 24 39 / 20%);
+  gap: 3px;
+  padding: 5px 7px;
 }
 
 .brand {
-  padding: 0 5px;
-  color: var(--dv-muted);
-  font-size: 12px;
-  font-weight: 700;
-  white-space: nowrap;
+  display: grid;
+  place-items: center;
+  padding: 0 4px 0 1px;
+  color: var(--dv-accent);
 }
+
+.brand svg {
+  width: 17px;
+  height: 17px;
+}
+
+/* ── segmented mode switch ────────────────────────── */
 
 .modes {
   display: flex;
-  overflow: hidden;
-  border: 1px solid var(--dv-border);
-  border-radius: 6px;
+  padding: 2px;
+  border-radius: calc(var(--dv-radius) - 3px);
+  background: var(--dv-accent-soft);
+  margin-right: 3px;
 }
 
 .modes button {
-  min-width: 54px;
-  height: 28px;
-  padding: 0 8px;
+  display: flex;
+  height: 26px;
+  align-items: center;
+  gap: 5px;
+  padding: 0 10px;
   border: 0;
-  border-radius: 0;
-}
-
-.modes button + button {
-  border-left: 1px solid var(--dv-border);
-}
-
-.modes button[aria-pressed='true'] {
-  background: var(--dv-selected);
-  color: var(--dv-selected-text);
-  font-weight: 700;
-}
-
-.command {
-  height: 30px;
-  padding: 0 9px;
+  border-radius: calc(var(--dv-radius) - 4px);
+  color: var(--dv-muted);
   white-space: nowrap;
 }
 
-.command[data-command='copy-markdown'] {
-  border-color: var(--dv-accent);
+.modes button svg {
+  width: 13px;
+  height: 13px;
+}
+
+.modes button[aria-pressed='true'] {
   background: var(--dv-accent);
   color: var(--dv-accent-text);
+  font-weight: 600;
+}
+
+/* ── icon buttons ─────────────────────────────────── */
+
+.command,
+.close,
+.note-remove {
+  position: relative;
+  display: grid;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  place-items: center;
+  color: var(--dv-muted);
+}
+
+.command:hover,
+.close:hover,
+.note-remove:hover {
+  background: var(--dv-accent-soft);
+  color: var(--dv-text);
+}
+
+.command[data-command='copy-markdown'] {
+  background: var(--dv-accent);
+  color: var(--dv-accent-text);
+}
+
+.command[data-command='copy-markdown']:hover {
+  color: var(--dv-accent-text);
+  filter: brightness(1.08);
+}
+
+.command[data-command='copy-json'] {
+  font-family: var(--dv-font-mono);
+  font-size: 11px;
   font-weight: 700;
 }
 
 .command-status {
   max-width: 150px;
   overflow: hidden;
+  padding: 0 2px;
   color: var(--dv-muted);
-  font-size: 11px;
+  font-family: var(--dv-font-mono);
+  font-size: 10px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.close {
-  width: 30px;
-  height: 30px;
-  padding: 0;
-  font-weight: 800;
+.separator {
+  width: 1px;
+  height: 18px;
+  flex: 0 0 auto;
+  background: var(--dv-border);
+  margin: 0 3px;
 }
+
+/* ── tooltips (aria-label + optional kbd hint) ───── */
+
+[data-tip] {
+  position: relative;
+}
+
+[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 7px);
+  left: 50%;
+  z-index: 5;
+  padding: 3px 7px;
+  border: 1px solid var(--dv-border);
+  border-radius: 5px;
+  background: var(--dv-surface-raised);
+  color: var(--dv-text);
+  font-family: var(--dv-font-mono);
+  font-size: 10px;
+  font-weight: 400;
+  line-height: 1.5;
+  white-space: nowrap;
+  box-shadow: var(--dv-shadow);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 2px);
+  transition: opacity var(--dv-motion) 250ms, transform var(--dv-motion) 250ms;
+}
+
+[data-tip]:hover::after,
+[data-tip]:focus-visible::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.root[data-position='top-right'] [data-tip]::after,
+.root[data-position='top-left'] [data-tip]::after {
+  top: calc(100% + 7px);
+  bottom: auto;
+}
+
+/* ── notes panel ──────────────────────────────────── */
 
 .notes-panel {
   display: grid;
   width: min(340px, calc(100vw - 72px));
   max-height: min(420px, calc(100vh - 88px));
   overflow: hidden;
-  border: 1px solid var(--dv-border);
-  border-radius: 8px;
-  background: var(--dv-bg);
-  box-shadow: 0 8px 24px rgb(17 24 39 / 20%);
   grid-template-rows: auto minmax(0, 1fr) auto;
 }
 
@@ -239,20 +312,22 @@ button:focus-visible {
 
 .notes-header h2 {
   margin: 0;
-  font-size: 14px;
+  font-size: 12px;
+  font-weight: 600;
   line-height: 1.3;
 }
 
 .notes-count {
   display: grid;
-  min-width: 22px;
-  height: 22px;
+  min-width: 20px;
+  height: 20px;
   place-items: center;
   border-radius: 50%;
-  background: var(--dv-selected);
+  background: var(--dv-accent-soft);
   color: var(--dv-selected-text);
-  font-size: 12px;
-  font-weight: 700;
+  font-family: var(--dv-font-mono);
+  font-size: 11px;
+  font-weight: 600;
 }
 
 .notes-list {
@@ -270,7 +345,7 @@ button:focus-visible {
 .note-row {
   display: grid;
   align-items: start;
-  grid-template-columns: minmax(0, 1fr) 30px;
+  grid-template-columns: minmax(0, 1fr) 28px;
   gap: 6px;
 }
 
@@ -280,24 +355,23 @@ button:focus-visible {
   min-width: 0;
   resize: vertical;
   border: 1px solid var(--dv-border);
-  border-radius: 6px;
-  background: var(--dv-bg);
+  border-radius: var(--dv-radius-inner);
+  background: var(--dv-accent-soft);
   color: var(--dv-text);
   font: inherit;
-  line-height: 1.4;
+  line-height: 1.45;
+  transition: border-color var(--dv-motion-fast);
+}
+
+.note-row textarea:focus-visible,
+.note-form textarea:focus-visible {
+  border-color: var(--dv-focus-ring);
+  outline: none;
 }
 
 .note-row textarea {
   min-height: 66px;
   padding: 8px;
-}
-
-.note-remove {
-  width: 30px;
-  height: 30px;
-  padding: 0;
-  color: var(--dv-muted);
-  font-size: 18px;
 }
 
 .note-form {
@@ -315,12 +389,17 @@ button:focus-visible {
 
 .note-add {
   min-width: 72px;
-  padding: 0 9px;
-  border-color: var(--dv-accent);
+  padding: 0 10px;
   background: var(--dv-accent);
   color: var(--dv-accent-text);
-  font-weight: 700;
+  font-weight: 600;
 }
+
+.note-add:hover {
+  filter: brightness(1.08);
+}
+
+/* ── responsive ───────────────────────────────────── */
 
 @media (max-width: 560px) {
   .chrome {

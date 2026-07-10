@@ -330,32 +330,42 @@ test("keeps element pins anchored through layout and nested scrolling", async ({
     .toBe(startX + 30);
 });
 
-test("keeps the complete overlay accessible under hostile host CSS", async ({
-  page,
-}) => {
-  await page.goto("/?fixture=hostile");
-  const host = page.locator("#drawover-root");
-  await host.locator(".trigger").click();
-  await page.getByTestId("checkout-submit").click();
-  await expect(host.getByRole("dialog", { name: "Add comment" })).toBeVisible();
-  await expect(
-    host.getByRole("textbox", { name: "Element comment" }),
-  ).toBeFocused();
+for (const theme of ["dark", "light"] as const) {
+  test(`keeps the complete overlay accessible under hostile host CSS (${theme} theme)`, async ({
+    page,
+  }) => {
+    await page.goto("/?fixture=hostile");
+    const host = page.locator("#drawover-root");
+    await host
+      .locator(".root")
+      .evaluate(
+        (root, next) => ((root as HTMLElement).dataset.theme = next),
+        theme,
+      );
+    await host.locator(".trigger").click();
+    await page.getByTestId("checkout-submit").click();
+    await expect(
+      host.getByRole("dialog", { name: "Add comment" }),
+    ).toBeVisible();
+    await expect(
+      host.getByRole("textbox", { name: "Element comment" }),
+    ).toBeFocused();
 
-  const results = await new AxeBuilder({ page })
-    .include("#drawover-root")
-    .analyze();
-  expect(
-    results.violations.map(({ id, nodes }) => ({
-      id,
-      nodes: nodes.map(({ failureSummary, html, target }) => ({
-        failureSummary,
-        html,
-        target,
+    const results = await new AxeBuilder({ page })
+      .include("#drawover-root")
+      .analyze();
+    expect(
+      results.violations.map(({ id, nodes }) => ({
+        id,
+        nodes: nodes.map(({ failureSummary, html, target }) => ({
+          failureSummary,
+          html,
+          target,
+        })),
       })),
-    })),
-  ).toEqual([]);
-});
+    ).toEqual([]);
+  });
+}
 
 async function addElementComment(
   page: Page,

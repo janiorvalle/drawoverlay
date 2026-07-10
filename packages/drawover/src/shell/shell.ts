@@ -2,6 +2,8 @@ import { matchesHotkey, parseHotkey } from "./hotkey.js";
 import { shellStyles } from "./styles.js";
 import type { SceneStore } from "../contracts/index.js";
 import { createGeneralNotesPanel } from "../general-notes/general-notes.js";
+import { tokenStyles } from "../theme/tokens.js";
+import { applyIcon, icon, logoMark } from "../theme/icons.js";
 
 export type DrawoverMode = "element-select" | "scene";
 export type DrawoverPosition =
@@ -45,7 +47,7 @@ export function createShell(options: CreateShellOptions): DrawoverInstance {
 
   const shadow = host.attachShadow({ mode: "open" });
   const style = document.createElement("style");
-  style.textContent = shellStyles;
+  style.textContent = tokenStyles + shellStyles;
   const root = document.createElement("div");
   root.className = "root";
   root.dataset.position = position;
@@ -66,9 +68,10 @@ export function createShell(options: CreateShellOptions): DrawoverInstance {
 
   const chrome = document.createElement("div");
   chrome.className = "chrome";
-  const trigger = button("D", "Toggle Drawover");
+  const trigger = button("", "Toggle Drawover");
+  trigger.append(logoMark());
   trigger.className = "trigger";
-  trigger.title = "Toggle Drawover";
+  trigger.title = `Toggle Drawover (${formatHotkey(options.hotkey ?? "alt+shift+d")})`;
   trigger.setAttribute("aria-expanded", "false");
   trigger.setAttribute("aria-controls", "drawover-toolbar");
 
@@ -81,7 +84,7 @@ export function createShell(options: CreateShellOptions): DrawoverInstance {
 
   const brand = document.createElement("span");
   brand.className = "brand";
-  brand.textContent = "drawover";
+  brand.append(logoMark());
 
   const modes = document.createElement("div");
   modes.className = "modes";
@@ -89,25 +92,36 @@ export function createShell(options: CreateShellOptions): DrawoverInstance {
   modes.setAttribute("aria-label", "Pointer mode");
   const inspectButton = button("Comment", "Comment on host page elements");
   const sceneButton = button("Draw", "Use the annotation scene");
+  inspectButton.prepend(icon("comment"));
+  sceneButton.prepend(icon("pen"));
   inspectButton.dataset.mode = "element-select";
   sceneButton.dataset.mode = "scene";
   modes.append(inspectButton, sceneButton);
 
-  const copyButton = button("Copy", "Copy review as Markdown");
+  const copyButton = button("", "Copy review as Markdown");
+  applyIcon(copyButton, "copy");
   copyButton.className = "command";
   copyButton.dataset.command = "copy-markdown";
-  const copyJsonButton = button("JSON", "Copy review as JSON");
+  copyButton.dataset.tip = "Copy Markdown";
+  const copyJsonButton = button("{}", "Copy review as JSON");
   copyJsonButton.className = "command";
   copyJsonButton.dataset.command = "copy-json";
-  const exportButton = button("PNG", "Export composited PNG");
+  copyJsonButton.dataset.tip = "Copy JSON";
+  const exportButton = button("", "Export composited PNG");
+  applyIcon(exportButton, "camera");
   exportButton.className = "command";
   exportButton.dataset.command = "export-png";
+  exportButton.dataset.tip = "Export PNG";
   const notes = createGeneralNotesPanel(options.sceneStore);
-  const clearButton = button("Clear", "Clear annotations");
+  const clearButton = button("", "Clear annotations");
+  applyIcon(clearButton, "trash");
   clearButton.className = "command";
-  const closeButton = button("X", "Close Drawover");
+  clearButton.dataset.tip = "Clear all";
+  const closeButton = button("", "Close Drawover");
+  applyIcon(closeButton, "close");
   closeButton.className = "close";
   closeButton.title = "Close";
+  closeButton.dataset.tip = `Close · ${formatHotkey(options.hotkey ?? "alt+shift+d")}`;
   const commandStatus = document.createElement("span");
   commandStatus.className = "command-status";
   commandStatus.setAttribute("role", "status");
@@ -115,12 +129,14 @@ export function createShell(options: CreateShellOptions): DrawoverInstance {
   toolbar.append(
     brand,
     modes,
+    separator(),
     notes.button,
     copyButton,
     copyJsonButton,
     exportButton,
     clearButton,
     commandStatus,
+    separator(),
     closeButton,
   );
   const workspace = document.createElement("div");
@@ -261,6 +277,38 @@ function button(text: string, label: string): HTMLButtonElement {
   element.textContent = text;
   element.setAttribute("aria-label", label);
   return element;
+}
+
+function separator(): HTMLSpanElement {
+  const element = document.createElement("span");
+  element.className = "separator";
+  element.setAttribute("aria-hidden", "true");
+  return element;
+}
+
+/** Human-readable hotkey (⌥⇧D on Apple platforms, Alt+Shift+D elsewhere). */
+export function formatHotkey(value: string): string {
+  const hotkey = parseHotkey(value);
+  const apple = /mac|iphone|ipad/i.test(globalThis.navigator.platform);
+  const key = hotkey.key.length === 1 ? hotkey.key.toUpperCase() : hotkey.key;
+  if (apple) {
+    return [
+      hotkey.ctrl ? "⌃" : "",
+      hotkey.alt ? "⌥" : "",
+      hotkey.shift ? "⇧" : "",
+      hotkey.meta ? "⌘" : "",
+      key,
+    ].join("");
+  }
+  return [
+    hotkey.ctrl ? "Ctrl" : "",
+    hotkey.alt ? "Alt" : "",
+    hotkey.shift ? "Shift" : "",
+    hotkey.meta ? "Meta" : "",
+    key,
+  ]
+    .filter(Boolean)
+    .join("+");
 }
 
 function setProtectedHostStyles(host: HTMLElement): void {

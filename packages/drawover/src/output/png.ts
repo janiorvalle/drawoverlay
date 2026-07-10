@@ -1,4 +1,5 @@
 import { getScrollOffset, viewportRectToDocument } from "../coordinates.js";
+import { PNG_BACKGROUND, TRANSPARENT_RGBA } from "../theme/tokens.js";
 
 interface ScreenshotLibrary {
   toCanvas(
@@ -258,11 +259,11 @@ function resolvePageBackground(page: HTMLElement): string {
   const candidates = [page, page.ownerDocument.body];
   for (const candidate of candidates) {
     const color = window.getComputedStyle(candidate).backgroundColor;
-    if (color && color !== "transparent" && color !== "rgba(0, 0, 0, 0)") {
+    if (color && color !== "transparent" && color !== TRANSPARENT_RGBA) {
       return color;
     }
   }
-  return "#ffffff";
+  return PNG_BACKGROUND;
 }
 
 function createCapturePage(

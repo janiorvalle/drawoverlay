@@ -137,8 +137,8 @@ export function createElementTargetingController(
 
 function setHighlightStyles(highlight: HTMLElement): void {
   const styles = {
-    background: "rgb(53 121 246 / 14%)",
-    border: "2px solid #3579f6",
+    background: "var(--dv-accent-soft)",
+    border: "2px solid var(--dv-accent)",
     boxSizing: "border-box",
     pointerEvents: "none",
     position: "fixed",
@@ -151,11 +151,12 @@ function setHighlightStyles(highlight: HTMLElement): void {
 
 function setLabelStyles(label: HTMLElement): void {
   const styles = {
-    background: "#174ea6",
-    borderRadius: "3px",
+    background: "var(--dv-surface-raised-opaque)",
+    border: "1px solid var(--dv-border)",
+    borderRadius: "5px",
     bottom: "100%",
-    color: "#ffffff",
-    font: "600 11px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace",
+    color: "var(--dv-selected-text)",
+    font: "500 11px/1.5 var(--dv-font-mono)",
     left: "-2px",
     maxWidth: "min(420px, calc(100vw - 16px))",
     overflow: "hidden",
