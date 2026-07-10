@@ -102,8 +102,7 @@ test("clears hover visuals when the shell closes", async ({ page }) => {
 async function cancelComment(
   page: import("@playwright/test").Page,
 ): Promise<void> {
-  await page
-    .locator("#drawover-root")
-    .getByRole("button", { name: "Cancel element comment" })
-    .click();
+  // Selection no longer opens the comment popover; Escape clears the pinned
+  // selection so the next assertion starts from a clean slate.
+  await page.keyboard.press("Escape");
 }

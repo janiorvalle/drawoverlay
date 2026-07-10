@@ -5,7 +5,7 @@ import type {
 } from "../contracts/index.js";
 import { documentToViewport } from "../coordinates.js";
 import { createAnnotationId, nextZ } from "../scene/model.js";
-import { ELEMENT_SELECTED_EVENT } from "../targeting/controller.js";
+import { ELEMENT_COMMENT_REQUEST_EVENT } from "../targeting/controller.js";
 import {
   resolveElement,
   resolveElementDocumentRect,
@@ -131,7 +131,7 @@ export function createElementCommentsController(
     textarea.select();
   };
 
-  const onElementSelected = (event: Event): void => {
+  const onCommentRequest = (event: Event): void => {
     const reference = (event as CustomEvent<ElementRef>).detail;
     open({ reference });
   };
@@ -205,7 +205,7 @@ export function createElementCommentsController(
     }
     close();
   });
-  host.addEventListener(ELEMENT_SELECTED_EVENT, onElementSelected);
+  host.addEventListener(ELEMENT_COMMENT_REQUEST_EVENT, onCommentRequest);
   host.addEventListener("drawover:clear-request", onClear);
   scene.addEventListener("dblclick", onSceneDoubleClick);
   document.addEventListener("keydown", onKeydown);
@@ -218,7 +218,7 @@ export function createElementCommentsController(
       if (destroyed) return;
       destroyed = true;
       observer.disconnect();
-      host.removeEventListener(ELEMENT_SELECTED_EVENT, onElementSelected);
+      host.removeEventListener(ELEMENT_COMMENT_REQUEST_EVENT, onCommentRequest);
       host.removeEventListener("drawover:clear-request", onClear);
       scene.removeEventListener("dblclick", onSceneDoubleClick);
       document.removeEventListener("keydown", onKeydown);

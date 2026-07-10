@@ -161,7 +161,7 @@ export class SceneEditor {
 
   #tool: SceneTool = "select";
   #color: (typeof COLORS)[number] = COLORS[0];
-  #fillEnabled = true;
+  #fillEnabled = false;
   #selectedIds = new Set<string>();
   #session: PointerSession | undefined;
   #inlineEditor: HTMLInputElement | undefined;
@@ -408,7 +408,7 @@ export class SceneEditor {
     const fill = createButton("Fill", "Toggle rectangle fill");
     fill.dataset.tip = "Toggle rectangle fill";
     fill.dataset.fillToggle = "true";
-    fill.setAttribute("aria-pressed", "true");
+    fill.setAttribute("aria-pressed", "false");
     fill.addEventListener("click", () => {
       this.#fillEnabled = !this.#fillEnabled;
       fill.setAttribute("aria-pressed", String(this.#fillEnabled));

@@ -282,6 +282,7 @@ test("keeps element pins anchored through layout and nested scrolling", async ({
   });
   await target.scrollIntoViewIfNeeded();
   await target.click();
+  await host.getByRole("button", { name: "Add comment" }).click();
   const dialog = host.getByRole("dialog", { name: "Add comment" });
   const dialogStart = await dialog.boundingBox();
   if (!dialogStart) throw new Error("Comment dialog was not visible.");
@@ -341,6 +342,7 @@ for (const theme of ["dark", "light"] as const) {
       );
     await host.locator(".trigger").click();
     await page.getByTestId("checkout-submit").click();
+    await host.getByRole("button", { name: "Add comment" }).click();
     await expect(
       host.getByRole("dialog", { name: "Add comment" }),
     ).toBeVisible();
@@ -370,6 +372,7 @@ async function addElementComment(
   comment: string,
 ): Promise<void> {
   await page.getByTestId("checkout-submit").click();
+  await host.getByRole("button", { name: "Add comment" }).click();
   const editor = host.getByRole("textbox", { name: "Element comment" });
   await editor.fill(comment);
   await host.getByRole("button", { name: "Save element comment" }).click();
