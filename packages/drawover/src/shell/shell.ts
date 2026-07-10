@@ -127,20 +127,24 @@ export function createShell(options: CreateShellOptions): DrawoverInstance {
   commandStatus.className = "command-status";
   commandStatus.setAttribute("role", "status");
   commandStatus.setAttribute("aria-live", "polite");
+  const commandBar = document.createElement("span");
+  commandBar.className = "command-bar";
+  commandBar.hidden = true;
+  commandBar.append(commandStatus, flavorChips);
   toolbar.append(
     brand,
     modes,
     separator(),
     copyButton,
     clearButton,
-    commandStatus,
-    flavorChips,
     separator(),
     closeButton,
   );
   const workspace = document.createElement("div");
   workspace.className = "workspace";
-  workspace.append(toolbar);
+  // The floating status pill anchors to the workspace: the toolbar scrolls
+  // horizontally on narrow screens and would clip an absolute child.
+  workspace.append(toolbar, commandBar);
   chrome.append(trigger, workspace);
   root.append(targetingLayer, sceneLayer, chrome);
   shadow.append(style, root);
@@ -196,6 +200,7 @@ export function createShell(options: CreateShellOptions): DrawoverInstance {
     operation: () => Promise<string>,
   ): Promise<void> => {
     button.disabled = true;
+    commandBar.hidden = false;
     commandStatus.textContent = pending;
     try {
       commandStatus.textContent = await operation();

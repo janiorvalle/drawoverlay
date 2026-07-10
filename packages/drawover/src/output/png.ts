@@ -162,6 +162,12 @@ export async function exportCompositedPng(
   const pageBounds = viewportRectToDocument(page.getBoundingClientRect());
   const scroll = getScrollOffset();
   const svgBounds = options.annotationSvg.getBoundingClientRect();
+  const bleed = annotationBleed(options.annotationSvg, {
+    height,
+    offsetX: svgBounds.left + scroll.x - pageBounds.x,
+    offsetY: svgBounds.top + scroll.y - pageBounds.y,
+    width,
+  });
   const root = options.annotationSvg.getRootNode();
   const overlayHost = root instanceof ShadowRoot ? root.host : undefined;
   const capturePage = createCapturePage(
@@ -172,12 +178,12 @@ export async function exportCompositedPng(
       (options.filter?.(node) ?? true),
   );
   const exportSvg = createExportSvg(options.annotationSvg, {
-    height,
-    offsetX: svgBounds.left + scroll.x - pageBounds.x,
-    offsetY: svgBounds.top + scroll.y - pageBounds.y,
+    height: height + bleed.top + bleed.bottom,
+    offsetX: svgBounds.left + scroll.x - pageBounds.x + bleed.left,
+    offsetY: svgBounds.top + scroll.y - pageBounds.y + bleed.top,
     sourceHeight: svgBounds.height,
     sourceWidth: svgBounds.width,
-    width,
+    width: width + bleed.left + bleed.right,
   });
 
   let library: ScreenshotLibrary;
@@ -223,18 +229,83 @@ export async function exportCompositedPng(
     );
   }
 
-  const context = canvas.getContext("2d");
-  if (!context) throw new Error("Could not create the PNG canvas context.");
-
   const scaleX = canvas.width / width;
   const scaleY = canvas.height / height;
-  context.drawImage(annotationImage, 0, 0, width * scaleX, height * scaleY);
+  // Annotations at the page edge (badges especially) extend past the page
+  // bounds; a bleed margin keeps them whole instead of clipping them.
+  const composite =
+    bleed.left || bleed.right || bleed.top || bleed.bottom
+      ? expandCanvas(canvas, bleed, { scaleX, scaleY }, backgroundColor)
+      : canvas;
+  const context = composite.getContext("2d");
+  if (!context) throw new Error("Could not create the PNG canvas context.");
+  context.drawImage(annotationImage, 0, 0, composite.width, composite.height);
 
   try {
-    return await dependencies.encodePng(canvas);
+    return await dependencies.encodePng(composite);
   } catch (error) {
     throw pngError("Could not encode the composited PNG.", error);
   }
+}
+
+interface BleedMargins {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+
+const MAX_BLEED = 24;
+
+/** Overflow of rendered annotations past the page bounds, clamped per side. */
+function annotationBleed(
+  svg: SVGSVGElement,
+  page: { width: number; height: number; offsetX: number; offsetY: number },
+): BleedMargins {
+  let content: { x: number; y: number; width: number; height: number };
+  try {
+    content = svg.getBBox();
+  } catch {
+    return { top: 0, right: 0, bottom: 0, left: 0 };
+  }
+  if (content.width === 0 && content.height === 0) {
+    return { top: 0, right: 0, bottom: 0, left: 0 };
+  }
+  // getBBox is in the scene's local (viewport) space; shift into page space.
+  const left = content.x + page.offsetX;
+  const top = content.y + page.offsetY;
+  const clamp = (value: number): number =>
+    Math.ceil(Math.min(MAX_BLEED, Math.max(0, value)));
+  return {
+    top: clamp(0 - top),
+    right: clamp(left + content.width - page.width),
+    bottom: clamp(top + content.height - page.height),
+    left: clamp(0 - left),
+  };
+}
+
+/** Copy the captured page onto a larger canvas with background-filled bleed. */
+function expandCanvas(
+  canvas: HTMLCanvasElement,
+  bleed: BleedMargins,
+  scale: { scaleX: number; scaleY: number },
+  backgroundColor: string,
+): HTMLCanvasElement {
+  const expanded = document.createElement("canvas");
+  expanded.width =
+    canvas.width + Math.round((bleed.left + bleed.right) * scale.scaleX);
+  expanded.height =
+    canvas.height + Math.round((bleed.top + bleed.bottom) * scale.scaleY);
+  const context = expanded.getContext("2d");
+  if (!context) throw new Error("Could not create the PNG canvas context.");
+  context.fillStyle = backgroundColor;
+  context.fillRect(0, 0, expanded.width, expanded.height);
+  context.drawImage(
+    canvas,
+    Math.round(bleed.left * scale.scaleX),
+    Math.round(bleed.top * scale.scaleY),
+  );
+  return expanded;
 }
 
 function stageCapturePage(

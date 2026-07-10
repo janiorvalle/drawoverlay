@@ -43,6 +43,7 @@ export const shellStyles = `
 }
 
 .workspace {
+  position: relative;
   display: flex;
   min-width: 0;
   flex-direction: column-reverse;
@@ -229,31 +230,38 @@ button svg {
   font-weight: 700;
 }
 
-/* Transient status floats above the toolbar so messages never reflow it. */
-.command-status {
+/* Transient status and flavor chips float above the toolbar in one pill so
+   copy feedback never reflows or shifts the toolbar itself. */
+.command-bar {
   position: absolute;
-  right: 8px;
+  right: 0;
   bottom: calc(100% + 8px);
-  max-width: 260px;
-  overflow: hidden;
-  padding: 3px 8px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 420px;
+  padding: 3px 4px 3px 8px;
   border: 1px solid var(--dv-border);
-  border-radius: 5px;
+  border-radius: 6px;
   background: var(--dv-surface-raised);
+  box-shadow: var(--dv-shadow);
+}
+
+.command-status {
+  overflow: hidden;
   color: var(--dv-text);
   font-family: var(--dv-font-mono);
   font-size: 10px;
   text-overflow: ellipsis;
   white-space: nowrap;
-  box-shadow: var(--dv-shadow);
 }
 
-.command-status:empty {
-  display: none;
+.command-bar:has(.flavor-chips[hidden]) {
+  padding-right: 8px;
 }
 
-.root[data-position='top-right'] .command-status,
-.root[data-position='top-left'] .command-status {
+.root[data-position='top-right'] .command-bar,
+.root[data-position='top-left'] .command-bar {
   top: calc(100% + 8px);
   bottom: auto;
 }
@@ -261,6 +269,10 @@ button svg {
 .flavor-chips {
   display: flex;
   gap: 3px;
+}
+
+.flavor-chips[hidden] {
+  display: none;
 }
 
 .flavor-chip {
