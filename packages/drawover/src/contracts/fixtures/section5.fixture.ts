@@ -190,6 +190,7 @@ export const section5Expected = {
 
 ### [6] Text: "Log out"
 - Anchored near right edge of drawing [5], right-aligned
+- Doc coords: 1320,18 → 1408,46
 - Intent: place alongside the proposed header
 
 ## General notes

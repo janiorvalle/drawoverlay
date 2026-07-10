@@ -97,6 +97,132 @@ describe("output serializer", () => {
     );
   });
 
+  it("never narrates against page-scale mounts and falls back to page region", () => {
+    // SPA archetype: everything lives inside a #root that spans the page.
+    const rectFor = (rect: {
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    }) =>
+      (() =>
+        ({
+          bottom: rect.y + rect.height,
+          height: rect.height,
+          left: rect.x,
+          right: rect.x + rect.width,
+          top: rect.y,
+          width: rect.width,
+          x: rect.x,
+          y: rect.y,
+          toJSON: () => ({}),
+        }) satisfies DOMRect) as Element["getBoundingClientRect"];
+    const root = document.createElement("div");
+    root.id = "root";
+    root.getBoundingClientRect = rectFor({
+      x: 0,
+      y: 0,
+      width: 1024,
+      height: 3000,
+    });
+    document.body.append(root);
+    Object.defineProperty(document.documentElement, "scrollWidth", {
+      configurable: true,
+      value: 1024,
+    });
+    Object.defineProperty(document.documentElement, "scrollHeight", {
+      configurable: true,
+      value: 3000,
+    });
+
+    const scene = {
+      version: 1,
+      annotations: [
+        {
+          id: "floating-arrow",
+          type: "arrow",
+          geometry: { x: 400, y: 1400, width: 200, height: 100 },
+          z: 1,
+          rotation: 0,
+          start: { x: 400, y: 1400 },
+          end: { x: 600, y: 1500 },
+          color: "#2563eb",
+          strokeWidth: 2,
+        },
+      ],
+    } as const satisfies SceneSnapshot;
+
+    const { markdown } = serializeReview(scene, allAnnotationsPageContext);
+
+    expect(markdown).not.toContain('<div id="root">');
+    expect(markdown).toContain("In the center of the page, about 48% down");
+  });
+
+  it("relates a drawing to the sibling drawing that contains it", () => {
+    const scene = {
+      version: 1,
+      annotations: [
+        {
+          id: "frame",
+          type: "rect",
+          geometry: { x: 100, y: 100, width: 400, height: 300 },
+          z: 1,
+          rotation: 0,
+          stroke: "#2563eb",
+          fill: "#dbeafe",
+          strokeWidth: 2,
+        },
+        {
+          id: "caption",
+          type: "text",
+          geometry: { x: 150, y: 150, width: 120, height: 24 },
+          z: 2,
+          rotation: 0,
+          text: "hey!",
+          color: "#111827",
+          fontSize: 16,
+          align: "left",
+        },
+      ],
+    } as const satisfies SceneSnapshot;
+
+    const { markdown } = serializeReview(scene, allAnnotationsPageContext);
+
+    expect(markdown).toContain(
+      '### [2] Text: "hey!"\n- Inside drawing [1]\n- Doc coords: 150,150 → 270,174',
+    );
+  });
+
+  it("rounds coordinates and omits the notes section when empty", () => {
+    const scene = {
+      version: 1,
+      annotations: [
+        {
+          id: "precise",
+          type: "rect",
+          geometry: {
+            x: 776.86328125,
+            y: 566.35546875,
+            width: 261.5234375,
+            height: 219.7734375,
+          },
+          z: 1,
+          rotation: 0,
+          stroke: "#2563eb",
+          fill: "#dbeafe",
+          strokeWidth: 2,
+          spatialDescription: "test placement",
+        },
+      ],
+    } as const satisfies SceneSnapshot;
+
+    const { markdown } = serializeReview(scene, allAnnotationsPageContext);
+
+    expect(markdown).toContain("- Doc coords: 777,566 → 1038,786");
+    expect(markdown).not.toContain("## General notes");
+    expect(markdown).toContain("0 notes");
+  });
+
   it("omits unavailable component and source metadata instead of guessing", () => {
     const { markdown } = serializeReview(
       allAnnotationsScene,

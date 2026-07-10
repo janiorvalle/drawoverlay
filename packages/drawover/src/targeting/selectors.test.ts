@@ -26,6 +26,22 @@ describe("selector engine", () => {
     }
   });
 
+  it("prefers a unique aria-label over utility-class stable paths", () => {
+    // Tailwind SPA archetype: no testid/id, ambiguous tag, utility classes.
+    document.body.innerHTML = `
+      <nav aria-label="Main navigation" class="flex h-20">
+        <nav aria-label="User menu" class="flex h-10"></nav>
+      </nav>
+    `;
+    const element = document.querySelector('[aria-label="Main navigation"]');
+    if (!element) throw new Error("fixture missing");
+
+    const selector = createSelectorChain(element);
+
+    expect(selector.primary).toBe('nav[aria-label="Main navigation"]');
+    expect(document.querySelector(selector.primary)).toBe(element);
+  });
+
   it("skips duplicate preferred attributes and finds a unique stable path", () => {
     document.body.innerHTML = `
       <section class="billing"><button data-testid="action">Pay</button></section>

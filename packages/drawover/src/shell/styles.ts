@@ -141,6 +141,7 @@ button svg {
 }
 
 .toolbar {
+  position: relative;
   display: flex;
   min-height: 40px;
   max-width: min(560px, calc(100vw - 72px));
@@ -231,15 +232,33 @@ button svg {
   font-weight: 700;
 }
 
+/* Transient status floats above the toolbar so messages never reflow it. */
 .command-status {
-  max-width: 150px;
+  position: absolute;
+  right: 8px;
+  bottom: calc(100% + 8px);
+  max-width: 260px;
   overflow: hidden;
-  padding: 0 2px;
-  color: var(--dv-muted);
+  padding: 3px 8px;
+  border: 1px solid var(--dv-border);
+  border-radius: 5px;
+  background: var(--dv-surface-raised);
+  color: var(--dv-text);
   font-family: var(--dv-font-mono);
   font-size: 10px;
   text-overflow: ellipsis;
   white-space: nowrap;
+  box-shadow: var(--dv-shadow);
+}
+
+.command-status:empty {
+  display: none;
+}
+
+.root[data-position='top-right'] .command-status,
+.root[data-position='top-left'] .command-status {
+  top: calc(100% + 8px);
+  bottom: auto;
 }
 
 .separator {

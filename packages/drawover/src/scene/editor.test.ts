@@ -40,7 +40,13 @@ describe("scene interactions", () => {
     expect(svg?.querySelectorAll('[data-annotation-type="rect"]')).toHaveLength(
       1,
     );
-    expect(svg?.querySelectorAll("[data-handle]")).toHaveLength(0);
+    // Drawing completes back in the select tool with the new shape selected.
+    expect(
+      shadow
+        ?.querySelector('button[data-tool="select"]')
+        ?.getAttribute("aria-pressed"),
+    ).toBe("true");
+    expect(svg?.querySelectorAll("[data-handle]").length).toBeGreaterThan(0);
     document.dispatchEvent(
       new KeyboardEvent("keydown", { key: "z", ctrlKey: true }),
     );
@@ -514,6 +520,9 @@ describe("scene interactions", () => {
       ?.querySelector<HTMLButtonElement>('button[data-tool="rect"]')
       ?.click();
     draw(svg, { x: 40, y: 70 }, { x: 110, y: 120 }, 1);
+    shadow
+      ?.querySelector<HTMLButtonElement>('button[data-tool="rect"]')
+      ?.click();
     draw(svg, { x: 140, y: 80 }, { x: 210, y: 130 }, 2);
     shadow
       ?.querySelector<HTMLButtonElement>('button[data-tool="select"]')
@@ -807,6 +816,9 @@ describe("scene interactions", () => {
       ?.querySelector<HTMLButtonElement>('[aria-label="Close general notes"]')
       ?.click();
     draft.blur();
+    shadow
+      ?.querySelector<HTMLButtonElement>('button[data-tool="rect"]')
+      ?.click();
     draw(svg, { x: 140, y: 80 }, { x: 210, y: 130 }, 34);
 
     shadow

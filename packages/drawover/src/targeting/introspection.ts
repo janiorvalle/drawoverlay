@@ -20,7 +20,7 @@ function inspectReact(element: Element): ComponentRef | undefined {
   while (fiber && depth < 100) {
     const type = fiber.type;
     const name = componentName(type);
-    if (name && typeof type !== "string") {
+    if (name && typeof type !== "string" && isMeaningfulName(name)) {
       const source =
         readSource(fiber._debugSource) ??
         readSource(asRecord(fiber.pendingProps)?.__source) ??
@@ -44,7 +44,7 @@ function inspectVue(element: Element): ComponentRef | undefined {
   );
   const type = asRecord(instance?.type);
   const name = readString(type?.name) ?? readString(type?.__name);
-  if (!name) return undefined;
+  if (!name || !isMeaningfulName(name)) return undefined;
 
   const source =
     readSource(type?.__source) ??
@@ -53,6 +53,30 @@ function inspectVue(element: Element): ComponentRef | undefined {
   return source
     ? { framework: "vue", name, source }
     : { framework: "vue", name };
+}
+
+const LIBRARY_INTERNAL_NAMES = new Set([
+  "Anonymous",
+  "Consumer",
+  "ForwardRef",
+  "Fragment",
+  "Portal",
+  "Provider",
+  "Root",
+  "Slot",
+  "Suspense",
+]);
+
+/**
+ * Component-library internals (Radix "Primitive.button", styled.div, memo
+ * wrappers) name plumbing, not the user's component. Keep walking up until a
+ * name a developer would recognize from their own code appears.
+ */
+function isMeaningfulName(name: string): boolean {
+  if (LIBRARY_INTERNAL_NAMES.has(name)) return false;
+  if (name.includes(".")) return false;
+  if (!/^[A-Z]/.test(name)) return false;
+  return true;
 }
 
 function componentName(value: unknown): string | undefined {

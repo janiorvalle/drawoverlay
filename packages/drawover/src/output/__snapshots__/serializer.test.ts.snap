@@ -174,6 +174,7 @@ exports[`output serializer > snapshots every annotation discriminator and page c
 - Doc coords: 32,80 → 672,152
 
 ### [6] Text: "Welcome, \\"Ada\\""
+- Inside drawing [5]
 - Doc coords: 64,98 → 324,130
 - Intent: Use as the proposed page heading
 

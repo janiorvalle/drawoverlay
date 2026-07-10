@@ -16,6 +16,14 @@ export function createSelectorChain(element: Element): SelectorChain {
     addCandidate(candidates, `#${escapeIdentifier(element.id)}`);
   }
 
+  const ariaLabel = element.getAttribute("aria-label")?.trim();
+  if (ariaLabel) {
+    const selector = `${element.localName.toLowerCase()}[aria-label="${escapeAttributeValue(ariaLabel)}"]`;
+    if (isUniqueMatch(selector, element, root)) {
+      addCandidate(candidates, selector);
+    }
+  }
+
   const stablePath = shortestStablePath(element, root);
   if (stablePath) addCandidate(candidates, stablePath);
 

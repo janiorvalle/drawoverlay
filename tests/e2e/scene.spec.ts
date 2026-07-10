@@ -117,6 +117,7 @@ test("shifted bracket shortcuts send selections to the front and back", async ({
   const scene = host.locator('[data-layer="scene"]');
   await tool(host, "rect").click();
   await drag(page, { x: 45, y: 90 }, { x: 125, y: 145 });
+  await tool(host, "rect").click();
   await drag(page, { x: 165, y: 100 }, { x: 245, y: 155 });
   const nodes = scene.locator('[data-annotation-type="rect"]');
   const firstId = await nodes.first().getAttribute("data-annotation-id");
@@ -142,6 +143,7 @@ test("supports marquee group moves, duplication, layers, delete, and deep histor
   const scene = host.locator('[data-layer="scene"]');
   await tool(host, "rect").click();
   await drag(page, { x: 55, y: 85 }, { x: 145, y: 145 });
+  await tool(host, "rect").click();
   await drag(page, { x: 175, y: 95 }, { x: 265, y: 155 });
   await tool(host, "select").click();
 

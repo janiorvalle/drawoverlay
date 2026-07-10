@@ -683,6 +683,9 @@ export class SceneEditor {
         if (isMeaningfulDraw(session.preview)) {
           this.#store.create(session.preview, `Create ${session.preview.type}`);
           this.#selectedIds = new Set([session.preview.id]);
+          // Match text/image tools: one shape per gesture, then back to
+          // Select so the next click manipulates instead of drawing again.
+          this.#setTool("select");
         }
         break;
       case "marquee": {
