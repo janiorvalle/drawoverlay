@@ -1,4 +1,4 @@
-# Working on drawover
+# Working on drawoverlay
 
 Conventions for anyone (human or agent) changing this codebase. These aren't
 style preferences — most of them are enforced by CI, and the rest exist
@@ -18,7 +18,7 @@ because breaking them breaks the product's core promises.
   `coordinates.ts`. Don't do your own `scrollX/scrollY` math anywhere else.
 - Pointer-mode changes route through the shell-owned mode state. No other
   module toggles `pointer-events` on the layers.
-- drawover UI renders inside its open Shadow DOM host. Don't mutate the host
+- drawoverlay UI renders inside its open Shadow DOM host. Don't mutate the host
   page beyond the single mount element and the temporary hover highlight.
 
 ## Things that look safe to change but aren't

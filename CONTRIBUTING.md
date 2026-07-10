@@ -35,7 +35,7 @@ pnpm --filter playground dev
   anywhere, including tests and fixtures. Use `example.com` style
   placeholders.
 
-If drawover produced bad output on your app (a brittle selector, a useless
+If drawoverlay produced bad output on your app (a brittle selector, a useless
 spatial description, a broken screenshot), the copied Markdown itself is a
 great bug report — paste it into the issue.
 

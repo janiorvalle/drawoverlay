@@ -1,11 +1,11 @@
-import type { PageContext, SceneSnapshot } from "drawover";
+import type { PageContext, SceneSnapshot } from "drawoverlay";
 
 interface OutputApi {
-  copyReviewImage: typeof import("drawover").copyReviewImage;
-  exportCompositedPng: typeof import("drawover").exportCompositedPng;
-  serializeReview: typeof import("drawover").serializeReview;
-  writeReviewToClipboard: typeof import("drawover").writeReviewToClipboard;
-  viewportRectToDocument: typeof import("drawover").viewportRectToDocument;
+  copyReviewImage: typeof import("drawoverlay").copyReviewImage;
+  exportCompositedPng: typeof import("drawoverlay").exportCompositedPng;
+  serializeReview: typeof import("drawoverlay").serializeReview;
+  writeReviewToClipboard: typeof import("drawoverlay").writeReviewToClipboard;
+  viewportRectToDocument: typeof import("drawoverlay").viewportRectToDocument;
 }
 
 /** Query-only WS-C harness. It deliberately does not wire the shell Copy button. */

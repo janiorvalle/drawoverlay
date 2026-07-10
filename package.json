@@ -8,18 +8,18 @@
   },
   "scripts": {
     "build": "pnpm -r --workspace-concurrency=1 build",
-    "typecheck": "pnpm --filter drawover build && pnpm -r typecheck",
+    "typecheck": "pnpm --filter drawoverlay build && pnpm -r typecheck",
     "lint": "eslint . && prettier --check . && node scripts/verify-architecture.mjs && node scripts/verify-dependencies.mjs && node scripts/verify-infra.mjs",
     "test": "vitest run",
-    "test:e2e": "pnpm --filter drawover build && node scripts/build-preview-fixtures.mjs && playwright test",
-    "test:prod-strip": "pnpm --filter drawover build && node scripts/verify-prod-strip.mjs",
-    "size": "pnpm --filter drawover build && size-limit",
-    "test:pack": "pnpm --filter drawover build && node scripts/verify-pack.mjs && pnpm --filter drawover test:package",
+    "test:e2e": "pnpm --filter drawoverlay build && node scripts/build-preview-fixtures.mjs && playwright test",
+    "test:prod-strip": "pnpm --filter drawoverlay build && node scripts/verify-prod-strip.mjs",
+    "size": "pnpm --filter drawoverlay build && size-limit",
+    "test:pack": "pnpm --filter drawoverlay build && node scripts/verify-pack.mjs && pnpm --filter drawoverlay test:package",
     "verify:architecture": "node scripts/verify-architecture.mjs",
     "verify:dependencies": "node scripts/verify-dependencies.mjs",
     "verify:infra": "node scripts/verify-infra.mjs",
     "verify": "pnpm build && pnpm typecheck && pnpm lint && pnpm test && pnpm test:e2e && pnpm test:prod-strip && pnpm size && pnpm test:pack",
-    "dev": "pnpm --filter drawover build && pnpm --filter @drawover/playground dev",
+    "dev": "pnpm --filter drawoverlay build && pnpm --filter @drawover/playground dev",
     "prepare": "node scripts/install-hooks.mjs"
   },
   "devDependencies": {
@@ -43,7 +43,7 @@
   },
   "size-limit": [
     {
-      "name": "drawover main entry",
+      "name": "drawoverlay main entry",
       "path": "packages/drawover/dist/index.js",
       "import": "{ init }",
       "gzip": true,

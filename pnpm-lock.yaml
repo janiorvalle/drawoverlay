@@ -62,7 +62,7 @@ importers:
 
   apps/next-smoke:
     dependencies:
-      drawover:
+      drawoverlay:
         specifier: workspace:*
         version: link:../../packages/drawover
       next:
@@ -84,7 +84,7 @@ importers:
 
   apps/playground:
     dependencies:
-      drawover:
+      drawoverlay:
         specifier: workspace:*
         version: link:../../packages/drawover
 

@@ -1,5 +1,5 @@
 name: Feature request
-description: Something drawover should do that it doesn't.
+description: Something drawoverlay should do that it doesn't.
 labels: ["enhancement"]
 body:
   - type: textarea
@@ -13,7 +13,7 @@ body:
   - type: textarea
     id: proposal
     attributes:
-      label: What would you like drawover to do?
+      label: What would you like drawoverlay to do?
     validations:
       required: true
   - type: textarea

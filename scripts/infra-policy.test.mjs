@@ -32,7 +32,7 @@ describe("public repository infra policy", () => {
           ["/", "/", `query.${privateHost}?asset=1`].join(""),
           `http${schemeSeparator}[fd00::1]/`,
           `http${schemeSeparator}[::1]/`,
-          `https${schemeSeparator}github.com/janiorvalle/drawover`,
+          `https${schemeSeparator}github.com/janiorvalle/drawoverlay`,
           `http${schemeSeparator}localhost:4173/`,
         ].join("\n"),
       ),

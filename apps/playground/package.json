@@ -11,7 +11,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "drawover": "workspace:*"
+    "drawoverlay": "workspace:*"
   },
   "devDependencies": {}
 }

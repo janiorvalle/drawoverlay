@@ -1,5 +1,5 @@
-import * as drawover from "drawover";
-import type { ElementRef } from "drawover";
+import * as drawover from "drawoverlay";
+import type { ElementRef } from "drawoverlay";
 
 interface DrawoverDevOptions {
   outputFixture: boolean;
