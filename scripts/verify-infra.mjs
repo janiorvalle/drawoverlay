@@ -15,7 +15,7 @@ const ciPath = join(root, ".github/workflows/ci.yml");
 const claPath = join(root, ".github/workflows/cla.yml");
 const releasePath = join(root, ".github/workflows/release.yml");
 const expectedClaHash =
-  "93071c0eb13c1622e09129bbef77849bad1c8e52764571793b77dcaf2a01ab87";
+  "eefff71893a43e0026f58807face34b926f18dc3055cd802c14ab2f8388c1723";
 const expectedGateCommands = {
   build: "pnpm build",
   typecheck: "pnpm typecheck",
