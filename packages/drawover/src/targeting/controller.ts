@@ -27,20 +27,30 @@ export function createElementTargetingController(
   setLabelStyles(label);
   highlight.append(label);
 
-  // Selection is a deliberate, sticky state: clicking pins this box and the
-  // Add comment affordance; commenting only happens when the user asks.
-  const selectionBox = document.createElement("div");
-  selectionBox.dataset.targetingSelection = "true";
-  setHighlightStyles(selectionBox, "selection");
-  const commentButton = document.createElement("button");
-  commentButton.type = "button";
-  commentButton.textContent = "Add comment";
-  commentButton.setAttribute("aria-label", "Add comment");
-  setCommentButtonStyles(commentButton);
-  selectionBox.append(commentButton);
+  // Selections are deliberate, sticky, and additive: every click pins
+  // another box with its own Add comment affordance, and clicking a pinned
+  // element again unpins it. Commenting only happens when the user asks.
+  const selections = new Map<Element, HTMLElement>();
+
+  const createSelectionBox = (element: Element): HTMLElement => {
+    const box = document.createElement("div");
+    box.dataset.targetingSelection = "true";
+    setHighlightStyles(box, "selection");
+    const commentButton = document.createElement("button");
+    commentButton.type = "button";
+    commentButton.textContent = "Add comment";
+    commentButton.setAttribute("aria-label", "Add comment");
+    setCommentButtonStyles(commentButton);
+    commentButton.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      requestComment(element);
+    });
+    box.append(commentButton);
+    return box;
+  };
 
   let hovered: Element | undefined;
-  let selected: Element | undefined;
   let destroyed = false;
 
   const isActive = (): boolean => {
@@ -57,9 +67,14 @@ export function createElementTargetingController(
     highlight.remove();
   };
 
-  const clearSelection = (): void => {
-    selected = undefined;
-    selectionBox.remove();
+  const clearSelections = (): void => {
+    for (const box of selections.values()) box.remove();
+    selections.clear();
+  };
+
+  const deselect = (element: Element): void => {
+    selections.get(element)?.remove();
+    selections.delete(element);
   };
 
   const positionBox = (box: HTMLElement, element: Element): boolean => {
@@ -87,23 +102,28 @@ export function createElementTargetingController(
     if (!highlight.isConnected) layer.append(highlight);
   };
 
-  const renderSelection = (): void => {
-    if (!selected) return;
-    if (!positionBox(selectionBox, selected)) {
-      clearSelection();
-      return;
+  const renderSelections = (): void => {
+    for (const [element, box] of selections) {
+      if (!positionBox(box, element)) {
+        deselect(element);
+        continue;
+      }
+      const rect = element.getBoundingClientRect();
+      const commentButton = box.querySelector<HTMLElement>("button");
+      if (commentButton) {
+        commentButton.style.top = rect.top < 44 ? "calc(100% + 6px)" : "auto";
+        commentButton.style.bottom =
+          rect.top < 44 ? "auto" : "calc(100% + 6px)";
+      }
+      // Selection boxes carry a real button; they mount on the root, not
+      // inside the aria-hidden decorative layer.
+      if (!box.isConnected) root.append(box);
     }
-    const rect = selected.getBoundingClientRect();
-    commentButton.style.top = rect.top < 44 ? "calc(100% + 6px)" : "auto";
-    commentButton.style.bottom = rect.top < 44 ? "auto" : "calc(100% + 6px)";
-    // The selection box carries a real button; it mounts on the root, not
-    // inside the aria-hidden decorative layer.
-    if (!selectionBox.isConnected) root.append(selectionBox);
   };
 
-  const requestComment = (): void => {
-    if (!selected?.isConnected) return;
-    const detail: ElementRef = captureElementRef(selected);
+  const requestComment = (element: Element): void => {
+    if (!element.isConnected) return;
+    const detail: ElementRef = captureElementRef(element);
     host.dispatchEvent(
       new CustomEvent<ElementRef>(ELEMENT_COMMENT_REQUEST_EVENT, { detail }),
     );
@@ -120,11 +140,11 @@ export function createElementTargetingController(
   const onPointerMove = (event: PointerEvent): void => {
     if (!isActive()) {
       clearHighlight();
-      clearSelection();
+      clearSelections();
       return;
     }
     const target = targetAt(event.clientX, event.clientY);
-    if (!target || target === selected) {
+    if (!target || selections.has(target)) {
       clearHighlight();
       return;
     }
@@ -138,7 +158,7 @@ export function createElementTargetingController(
     if (!event.isTrusted) return;
     if (!isActive()) {
       clearHighlight();
-      clearSelection();
+      clearSelections();
       return;
     }
     const target = targetAt(event.clientX, event.clientY);
@@ -147,15 +167,15 @@ export function createElementTargetingController(
     // is consumed before host links, buttons, or framework handlers see it.
     event.preventDefault();
     event.stopPropagation();
-    if (target === selected) {
-      // Clicking the selection again is an explicit ask to comment on it.
-      requestComment();
+    if (selections.has(target)) {
+      // Clicking a pinned element again unpins it.
+      deselect(target);
       return;
     }
-    selected = target;
+    selections.set(target, createSelectionBox(target));
     hovered = undefined;
     highlight.remove();
-    renderSelection();
+    renderSelections();
     const detail: ElementRef = captureElementRef(target);
     host.dispatchEvent(
       new CustomEvent<ElementRef>(ELEMENT_SELECTED_EVENT, { detail }),
@@ -165,38 +185,33 @@ export function createElementTargetingController(
   const onKeydown = (event: KeyboardEvent): void => {
     if (!isActive() || !hovered) clearHighlight();
     if (!isActive()) {
-      clearSelection();
+      clearSelections();
       return;
     }
-    if (event.key === "Escape" && selected) {
-      clearSelection();
+    if (event.key === "Escape" && selections.size > 0) {
+      clearSelections();
     } else {
-      renderSelection();
+      renderSelections();
     }
   };
 
   const onShellStateChange = (event: MouseEvent): void => {
     if (event.composedPath().includes(host) && !isActive()) {
       clearHighlight();
-      clearSelection();
+      clearSelections();
     }
   };
 
   const onViewportChange = (): void => {
     if (!isActive()) {
       clearHighlight();
-      clearSelection();
+      clearSelections();
       return;
     }
     if (hovered) renderHighlight(hovered);
-    renderSelection();
+    renderSelections();
   };
 
-  commentButton.addEventListener("click", (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    requestComment();
-  });
   document.addEventListener("pointermove", onPointerMove, { passive: true });
   document.addEventListener("click", onClick, true);
   document.addEventListener("click", onShellStateChange);
@@ -215,7 +230,7 @@ export function createElementTargetingController(
       document.removeEventListener("scroll", onViewportChange, true);
       window.removeEventListener("resize", onViewportChange);
       clearHighlight();
-      clearSelection();
+      clearSelections();
     },
   };
 }

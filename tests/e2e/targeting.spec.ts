@@ -99,6 +99,28 @@ test("clears hover visuals when the shell closes", async ({ page }) => {
   await expect(highlight).toHaveCount(0);
 });
 
+test("pins multiple selections and toggles them off individually", async ({
+  page,
+}) => {
+  const host = page.locator("#drawover-root");
+  const selections = host.locator("[data-targeting-selection]");
+
+  await page.locator("#fixture-id").click();
+  await page.getByTestId("fixture-testid").click();
+  await expect(selections).toHaveCount(2);
+  await expect(host.getByRole("button", { name: "Add comment" })).toHaveCount(
+    2,
+  );
+
+  // Clicking a pinned element again unpins only that one.
+  await page.locator("#fixture-id").click();
+  await expect(selections).toHaveCount(1);
+
+  // Escape clears the rest.
+  await page.keyboard.press("Escape");
+  await expect(selections).toHaveCount(0);
+});
+
 async function cancelComment(
   page: import("@playwright/test").Page,
 ): Promise<void> {

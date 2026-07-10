@@ -71,6 +71,19 @@ describe("element targeting lifecycle", () => {
       ?.querySelector<HTMLButtonElement>('[aria-label="Add comment"]')
       ?.click();
     expect(commentRequest).toHaveBeenCalledOnce();
+
+    // Clicking the pinned element again toggles the selection off.
+    const secondClick = new MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+      clientX: 30,
+      clientY: 40,
+    });
+    Object.defineProperty(secondClick, "isTrusted", { value: true });
+    target.dispatchEvent(secondClick);
+    expect(
+      host?.shadowRoot?.querySelectorAll("[data-targeting-selection]"),
+    ).toHaveLength(0);
   });
 
   it("obeys shell mode and removes highlight state when scene mode takes over", () => {
