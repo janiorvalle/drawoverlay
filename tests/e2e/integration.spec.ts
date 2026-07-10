@@ -158,6 +158,8 @@ test("one-press copy puts Markdown and a composited PNG on the clipboard", async
   }));
   const submitBounds = await page.getByTestId("checkout-submit").boundingBox();
   if (!submitBounds) throw new Error("Checkout button was not visible.");
+  const gradientBounds = await page.getByTestId("gradient-cta").boundingBox();
+  if (!gradientBounds) throw new Error("Gradient button was not visible.");
   const pixelRatio = await page.evaluate(() => window.devicePixelRatio);
 
   await host.getByRole("button", { name: "Copy review" }).click();
@@ -215,7 +217,7 @@ test("one-press copy puts Markdown and a composited PNG on the clipboard", async
   expect(png.byteLength).toBeGreaterThan(2_000);
 
   const pixels = await page.evaluate(
-    async ({ background, dataUrl, host, ratio }) => {
+    async ({ background, dataUrl, gradient, host, ratio }) => {
       const image = new Image();
       image.src = dataUrl;
       await image.decode();
@@ -272,8 +274,29 @@ test("one-press copy puts Markdown and a composited PNG on the clipboard", async
           }
         }
       }
+      // Tailwind v4 archetype: gradients with modern interpolation hints must
+      // survive capture, or white-on-amber CTAs render white-on-white.
+      let gradientPixels = 0;
+      for (let y = gradient.y; y <= gradient.y + gradient.height; y += 1) {
+        for (let x = gradient.x; x <= gradient.x + gradient.width; x += 1) {
+          const [red, green, blue] = sample(x, y);
+          if (
+            red !== undefined &&
+            green !== undefined &&
+            blue !== undefined &&
+            red >= 150 &&
+            red <= 215 &&
+            green >= 50 &&
+            green <= 105 &&
+            blue <= 40
+          ) {
+            gradientPixels += 1;
+          }
+        }
+      }
       return {
         annotationPixels,
+        gradientPixels,
         hostCenter: sample(host.x + host.width / 2, host.y + host.height / 2),
         hostPixels,
         page: sample(8, 150),
@@ -282,12 +305,14 @@ test("one-press copy puts Markdown and a composited PNG on the clipboard", async
     {
       background: badgePoint,
       dataUrl: `data:image/png;base64,${png.toString("base64")}`,
+      gradient: gradientBounds,
       host: submitBounds,
       ratio: pixelRatio,
     },
   );
   expect(pixels.annotationPixels).toBeGreaterThan(20);
   expect(pixels.hostPixels).toBeGreaterThan(500);
+  expect(pixels.gradientPixels).toBeGreaterThan(500);
   expect(pixels.hostCenter.slice(0, 3)).toEqual([19, 111, 99]);
   expect(pixels.page.slice(0, 3)).toEqual([238, 241, 245]);
 });

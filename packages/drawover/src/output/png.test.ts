@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { PngExportDependencies } from "./png.js";
-import { exportCompositedPng } from "./png.js";
+import { exportCompositedPng, normalizeCaptureStyle } from "./png.js";
 
 interface PngHarness {
   canvas: HTMLCanvasElement;
@@ -207,8 +207,11 @@ describe("composited PNG output", () => {
       includeStyleProperties: string[];
     };
     expect(options.includeStyleProperties).toContain("background-color");
+    // Gradients must survive capture (Tailwind v4 CTAs are gradient-only);
+    // url-bearing values are rejected per-value by the sanitizer instead of
+    // banning the property outright.
+    expect(options.includeStyleProperties).toContain("background-image");
     expect(options.includeStyleProperties).not.toContain("background");
-    expect(options.includeStyleProperties).not.toContain("background-image");
     expect(options.includeStyleProperties).not.toContain("mask");
     const remoteImage = document.createElement("img");
     remoteImage.src = "https://assets.example.com/review.png";
@@ -252,6 +255,28 @@ describe("composited PNG output", () => {
     expect(options.filter(localSvg)).toBe(false);
     expect(options.filter(remoteVideo)).toBe(false);
     expect(options.filter(document.createElement("style"))).toBe(false);
+  });
+
+  it("strips modern interpolation hints from captured gradients", () => {
+    // SVG-image rasterization drops gradients carrying interpolation hints;
+    // real-browser retention is covered by the e2e pixel scan.
+    expect(
+      normalizeCaptureStyle(
+        "linear-gradient(in oklab, rgb(184, 78, 0) 0%, rgb(179, 76, 0) 100%)",
+      ),
+    ).toBe("linear-gradient(rgb(184, 78, 0) 0%, rgb(179, 76, 0) 100%)");
+    expect(
+      normalizeCaptureStyle(
+        "linear-gradient(to right in oklch longer hue, red, blue)",
+      ),
+    ).toBe("linear-gradient(to right, red, blue)");
+    expect(
+      normalizeCaptureStyle("radial-gradient(in srgb-linear, red, blue)"),
+    ).toBe("radial-gradient(red, blue)");
+    expect(normalizeCaptureStyle("rgb(184, 78, 0)")).toBe("rgb(184, 78, 0)");
+    expect(
+      normalizeCaptureStyle("linear-gradient(rgb(1, 2, 3), rgb(4, 5, 6))"),
+    ).toBe("linear-gradient(rgb(1, 2, 3), rgb(4, 5, 6))");
   });
 
   it("sanitizes a resource-bearing capture root before loading the dependency", async () => {

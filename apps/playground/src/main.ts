@@ -80,6 +80,7 @@ app.innerHTML = `
           <span>Save this card for next time</span>
         </label>
         <button data-testid="checkout-submit" type="submit">Place order</button>
+        <button data-testid="gradient-cta" class="gradient-cta" type="button">Start a match now</button>
       </form>
     </section>
     <aside class="summary" aria-labelledby="summary-title">

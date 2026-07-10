@@ -44,7 +44,13 @@ const CAPTURE_STYLE_PROPERTIES = [
   "align-items",
   "align-self",
   "appearance",
+  "background-clip",
   "background-color",
+  "background-image",
+  "background-origin",
+  "background-position",
+  "background-repeat",
+  "background-size",
   "border-bottom-color",
   "border-bottom-left-radius",
   "border-bottom-right-radius",
@@ -358,7 +364,7 @@ function sanitizeClone(source: Element, clone: Element): void {
     for (const property of CAPTURE_STYLE_PROPERTIES) {
       const value = computed.getPropertyValue(property);
       if (value && isSafeStyleValue(value)) {
-        clone.style.setProperty(property, value);
+        clone.style.setProperty(property, normalizeCaptureStyle(value));
       }
     }
   }
@@ -381,6 +387,22 @@ function sanitizeClone(source: Element, clone: Element): void {
   ) {
     clone.srcset = "";
   }
+}
+
+/**
+ * SVG-image rasterization silently drops gradients that use modern color
+ * interpolation hints (the Tailwind v4 gradient pattern), leaving elements
+ * blank. Computed color stops are already resolved, so removing the hint
+ * preserves the endpoints exactly.
+ */
+export function normalizeCaptureStyle(value: string): string {
+  if (!value.includes("gradient(")) return value;
+  return value
+    .replace(
+      /\s*\bin\s+[a-z][a-z0-9-]*(?:\s+(?:shorter|longer|increasing|decreasing)\s+hue)?/gi,
+      "",
+    )
+    .replace(/\(\s*,\s*/g, "(");
 }
 
 function isSafeStyleValue(value: string): boolean {
