@@ -34,13 +34,11 @@ describe("output serializer", () => {
       allAnnotationsPageContext,
     );
 
-    expect(markdown.indexOf("### [3]")).toBeLessThan(
-      markdown.indexOf("### [2]"),
+    // The pin ([2] in scene order) prints in the element-comments section
+    // before drawing [1], proving numbering never re-sorts by z or section.
+    expect(markdown.indexOf("### [2]")).toBeLessThan(
+      markdown.indexOf("### [1]"),
     );
-    expect(markdown).toContain(
-      '## General notes\n- [1] "Keep the \\"quiet\\" treatment\\non narrow screens"',
-    );
-    expect(markdown).not.toContain("### [1]");
   });
 
   it("places named spatial narration before raw drawing coordinates", () => {
@@ -49,8 +47,8 @@ describe("output serializer", () => {
       allAnnotationsPageContext,
     );
     const image = markdown.slice(
-      markdown.indexOf('### [2] Image: "Account'),
-      markdown.indexOf("### [4] Arrow"),
+      markdown.indexOf('### [1] Image: "Account'),
+      markdown.indexOf("### [3] Arrow"),
     );
 
     expect(image.indexOf("Below <nav>")).toBeLessThan(
@@ -193,7 +191,7 @@ describe("output serializer", () => {
     );
   });
 
-  it("rounds coordinates and omits the notes section when empty", () => {
+  it("rounds coordinates to whole pixels", () => {
     const scene = {
       version: 1,
       annotations: [
@@ -220,7 +218,6 @@ describe("output serializer", () => {
 
     expect(markdown).toContain("- Doc coords: 777,566 → 1038,786");
     expect(markdown).not.toContain("## General notes");
-    expect(markdown).toContain("0 notes");
   });
 
   it("omits unavailable component and source metadata instead of guessing", () => {
@@ -229,7 +226,7 @@ describe("output serializer", () => {
       allAnnotationsPageContext,
     );
     const pin = markdown.slice(
-      markdown.indexOf("### [3]"),
+      markdown.indexOf("### [2]"),
       markdown.indexOf("## Drawings"),
     );
 

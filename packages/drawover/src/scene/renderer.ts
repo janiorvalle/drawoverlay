@@ -33,7 +33,6 @@ export class SceneRenderer {
       snapshot.annotations.map(({ id }, index) => [id, index + 1] as const),
     );
     const annotations = snapshot.annotations
-      .filter(({ type }) => type !== "note")
       .map((annotation) => state.overrides?.get(annotation.id) ?? annotation)
       .map(resolveElementPinPosition)
       .sort((left, right) => left.z - right.z);
@@ -177,14 +176,8 @@ function renderAnnotation(
       );
       break;
     }
-    case "note":
-      break;
   }
-  if (
-    annotation.type !== "element-pin" &&
-    annotation.type !== "note" &&
-    number
-  ) {
+  if (annotation.type !== "element-pin" && number) {
     group.append(
       ...renderBadge(number, viewportGeometry.x, viewportGeometry.y, 11),
     );

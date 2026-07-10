@@ -101,9 +101,8 @@ The default hotkey is `Alt+Shift+D`. `position` accepts `bottom-right`,
 - **Text** places editable freestanding text.
 - **Image** imports an image file. Pasting an image while Draw mode is active also
   inserts it. Images remain local as data URLs.
-- **Notes** manages page-level general notes.
 
-Annotations and notes are saved in `localStorage` using an origin-and-path key.
+Annotations are saved in `localStorage` using an origin-and-path key.
 They survive reloads, while **Clear** removes both the scene and its stored copy.
 Undo after reload starts from the restored scene instead of erasing it.
 
@@ -121,8 +120,8 @@ Undo after reload starts from the restored scene instead of erasing it.
   "Markdown only" status.
 
 Badge numbers use scene order and match the Markdown headings. The Markdown
-structure contains page metadata, element comments, a clearly marked proposed
-drawings section, and general notes:
+structure contains page metadata, element comments, and a clearly marked
+proposed drawings section:
 
 ```markdown
 # UI Review — /checkout (drawover)
@@ -134,14 +133,10 @@ drawings section, and general notes:
 ## Drawings (proposed UI — these elements do NOT exist yet)
 
 ### [2] Rectangle: "Home"
-
-## General notes
-
-- [3] "Check mobile spacing"
 ```
 
-Badge numbers follow scene order across all annotation types, including general
-notes, so the numbering in the copied output never has unexplained gaps.
+Badge numbers follow scene order across all annotation types, so the numbering
+in the copied output never has unexplained gaps.
 
 ## Keyboard
 

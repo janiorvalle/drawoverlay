@@ -21,7 +21,6 @@ const ICON_PATHS: Record<string, string> = {
   "send-backward": `<path d="M4 6.5L8 10l4-3.5" ${STROKE}/><path d="M4 3.5L8 7l4-3.5" ${STROKE} opacity="0.45"/>`,
   "bring-forward": `<path d="M4 9.5L8 6l4 3.5" ${STROKE}/><path d="M4 12.5L8 9l4 3.5" ${STROKE} opacity="0.45"/>`,
   "bring-front": `<rect x="6" y="2.5" width="7.5" height="7.5" rx="1" fill="currentColor" opacity="0.45"/><rect x="2.5" y="7" width="6" height="6" rx="1" ${STROKE}/>`,
-  notes: `<path d="M4 2.5h8A1.5 1.5 0 0113.5 4v6L10 13.5H4A1.5 1.5 0 012.5 12V4A1.5 1.5 0 014 2.5z" ${STROKE}/><path d="M10 13.5V10h3.5" ${STROKE}/>`,
   copy: `<rect x="5.5" y="5.5" width="8" height="8" rx="1.5" ${STROKE}/><path d="M3 10V4a1.5 1.5 0 011.5-1.5H10" ${STROKE}/>`,
   camera: `<rect x="2" y="4.5" width="12" height="9" rx="1.5" ${STROKE}/><circle cx="8" cy="9" r="2.4" ${STROKE}/><path d="M6 4.5L7 3h2l1 1.5" ${STROKE}/>`,
   trash: `<path d="M3 4.5h10M6.5 4V3h3v1M4.5 4.5l.6 8a1 1 0 001 .9h3.8a1 1 0 001-.9l.6-8" ${STROKE}/>`,

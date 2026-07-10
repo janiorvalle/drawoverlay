@@ -1,7 +1,6 @@
 import { matchesHotkey, parseHotkey } from "./hotkey.js";
 import { shellStyles } from "./styles.js";
 import type { SceneStore } from "../contracts/index.js";
-import { createGeneralNotesPanel } from "../general-notes/general-notes.js";
 import { tokenStyles } from "../theme/tokens.js";
 import { applyIcon, icon, logoMark } from "../theme/icons.js";
 
@@ -103,7 +102,6 @@ export function createShell(options: CreateShellOptions): DrawoverInstance {
   copyButton.className = "command";
   copyButton.dataset.command = "copy-review";
   copyButton.dataset.tip = "Copy review · Markdown + PNG";
-  const notes = createGeneralNotesPanel(options.sceneStore);
   const clearButton = button("", "Clear annotations");
   applyIcon(clearButton, "trash");
   clearButton.className = "command";
@@ -121,7 +119,6 @@ export function createShell(options: CreateShellOptions): DrawoverInstance {
     brand,
     modes,
     separator(),
-    notes.button,
     copyButton,
     clearButton,
     commandStatus,
@@ -130,7 +127,7 @@ export function createShell(options: CreateShellOptions): DrawoverInstance {
   );
   const workspace = document.createElement("div");
   workspace.className = "workspace";
-  workspace.append(toolbar, notes.element);
+  workspace.append(toolbar);
   chrome.append(trigger, workspace);
   root.append(targetingLayer, sceneLayer, chrome);
   shadow.append(style, root);
@@ -200,7 +197,6 @@ export function createShell(options: CreateShellOptions): DrawoverInstance {
 
   const requestClear = (): void => {
     options.onClear();
-    notes.close();
     emit("clear-request");
   };
 
@@ -235,7 +231,6 @@ export function createShell(options: CreateShellOptions): DrawoverInstance {
       if (destroyed) return;
       destroyed = true;
       document.removeEventListener("keydown", onKeydown);
-      notes.destroy();
       host.remove();
       options.onDestroy();
     },

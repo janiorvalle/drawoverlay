@@ -135,14 +135,6 @@ function createFixtureScene(
         spatialDescription: "Inside drawing [2], left-aligned",
         intent: "Use as the proposed alert heading",
       },
-      {
-        id: "fixture-note",
-        type: "note",
-        geometry: { x: 0, y: 0, width: 0, height: 0 },
-        z: 0,
-        rotation: 0,
-        text: "Overall spacing feels cramped on mobile widths",
-      },
     ],
   };
 }

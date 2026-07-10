@@ -9,7 +9,6 @@ export type {
   ElementPinAnnotation,
   ElementRef,
   ImageAnnotation,
-  NoteAnnotation,
   RectAnnotation,
   SceneSnapshot,
   SelectorChain,

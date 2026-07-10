@@ -110,8 +110,7 @@ button svg {
 /* ── surfaces ─────────────────────────────────────── */
 
 .trigger,
-.toolbar,
-.notes-panel {
+.toolbar {
   border: 1px solid var(--dv-border);
   border-radius: var(--dv-radius);
   background: var(--dv-bg);
@@ -198,8 +197,7 @@ button svg {
 /* ── icon buttons ─────────────────────────────────── */
 
 .command,
-.close,
-.note-remove {
+.close {
   position: relative;
   display: grid;
   width: 28px;
@@ -210,8 +208,7 @@ button svg {
 }
 
 .command:hover,
-.close:hover,
-.note-remove:hover {
+.close:hover {
   background: var(--dv-accent-soft);
   color: var(--dv-text);
 }
@@ -310,134 +307,6 @@ button svg {
   bottom: auto;
 }
 
-/* ── notes panel ──────────────────────────────────── */
-
-.notes-panel {
-  display: grid;
-  width: min(340px, calc(100vw - 72px));
-  max-height: min(420px, calc(100vh - 88px));
-  overflow: hidden;
-  grid-template-rows: auto minmax(0, 1fr) auto;
-}
-
-.notes-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 11px 12px;
-  border-bottom: 1px solid var(--dv-border);
-}
-
-.notes-header h2 {
-  margin: 0;
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1.3;
-}
-
-.notes-count {
-  display: grid;
-  min-width: 20px;
-  height: 20px;
-  place-items: center;
-  border-radius: 50%;
-  background: var(--dv-accent-soft);
-  color: var(--dv-selected-text);
-  font-family: var(--dv-font-mono);
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.notes-list {
-  display: grid;
-  overflow-y: auto;
-  padding: 8px;
-  gap: 8px;
-}
-
-.notes-empty {
-  margin: 8px 4px;
-  color: var(--dv-muted);
-}
-
-.note-row {
-  display: grid;
-  align-items: start;
-  grid-template-columns: minmax(0, 1fr) 28px;
-  gap: 6px;
-}
-
-.note-row textarea,
-.note-form textarea {
-  width: 100%;
-  min-width: 0;
-  resize: vertical;
-  border: 1px solid var(--dv-border);
-  border-radius: var(--dv-radius-inner);
-  background: var(--dv-accent-soft);
-  color: var(--dv-text);
-  font: inherit;
-  line-height: 1.45;
-  transition: border-color var(--dv-motion-fast);
-}
-
-.note-row textarea:focus-visible,
-.note-form textarea:focus-visible {
-  border-color: var(--dv-focus-ring);
-  outline: none;
-}
-
-.note-row textarea {
-  min-height: 66px;
-  padding: 8px;
-}
-
-.note-form {
-  display: grid;
-  padding: 10px;
-  border-top: 1px solid var(--dv-border);
-  gap: 8px;
-}
-
-.note-form textarea {
-  min-height: 54px;
-  padding: 7px 8px;
-}
-
-.note-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 6px;
-}
-
-.note-actions button {
-  height: 28px;
-  min-width: 64px;
-  padding: 0 10px;
-  border: 1px solid var(--dv-border);
-  color: var(--dv-muted);
-}
-
-.note-actions button:hover {
-  background: var(--dv-accent-soft);
-  color: var(--dv-text);
-}
-
-.note-actions .note-add,
-.note-actions button.note-add {
-  border-color: transparent;
-  background: var(--dv-accent);
-  color: var(--dv-accent-text);
-  font-weight: 600;
-}
-
-.note-actions button.note-add:hover {
-  background: var(--dv-accent);
-  color: var(--dv-accent-text);
-  filter: brightness(1.08);
-}
-
 /* ── responsive ───────────────────────────────────── */
 
 @media (max-width: 560px) {
@@ -450,13 +319,8 @@ button svg {
     flex-wrap: wrap;
   }
 
-  .workspace,
-  .notes-panel {
+  .workspace {
     width: min(304px, calc(100vw - 72px));
-  }
-
-  .notes-panel {
-    max-height: calc(100vh - 152px);
   }
 
   .brand {

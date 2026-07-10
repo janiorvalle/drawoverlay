@@ -31,13 +31,6 @@ test("annotates, edits, copies, reloads, and clears a mixed review", async ({
   await expect(pin).toHaveAttribute("data-annotation-number", "1");
   await expect(rectangle).toHaveAttribute("data-annotation-number", "2");
 
-  await host.getByRole("button", { name: "Open general notes" }).click();
-  await host
-    .getByRole("textbox", { name: "New general note" })
-    .fill("Check mobile spacing");
-  await host.getByRole("button", { name: "Save general note" }).click();
-  await host.getByRole("button", { name: "Close general notes" }).click();
-
   await host.getByRole("button", { name: "Copy review" }).click();
   await expect(host.locator(".command-status")).toHaveText(
     "Copied review + image",
@@ -46,7 +39,6 @@ test("annotates, edits, copies, reloads, and clears a mixed review", async ({
   expect(markdown).toContain("## Element comments");
   expect(markdown).toContain('### [1] "Disable until validation passes"');
   expect(markdown).toContain("### [2] Rectangle");
-  expect(markdown).toContain('- [3] "Check mobile spacing"');
 
   await pin.dispatchEvent("dblclick");
   const commentEditor = host.getByRole("textbox", { name: "Element comment" });

@@ -692,10 +692,8 @@ export class SceneEditor {
         const selected = this.#store
           .getSnapshot()
           .annotations.map(resolveElementPinPosition)
-          .filter(
-            (annotation) =>
-              annotation.type !== "note" &&
-              intersects(visualBounds(annotation), session.current),
+          .filter((annotation) =>
+            intersects(visualBounds(annotation), session.current),
           )
           .map(({ id }) => id);
         if (!session.additive) this.#selectedIds.clear();
@@ -1096,7 +1094,7 @@ export class SceneEditor {
     if (this.#selectedIds.size === 0) return;
     const snapshot = this.#store.getSnapshot();
     const reordered = reorderAnnotations(
-      snapshot.annotations.filter(({ type }) => type !== "note"),
+      snapshot.annotations,
       this.#selectedIds,
       action,
     );
@@ -1195,10 +1193,7 @@ export class SceneEditor {
 
   #pruneSelection(): void {
     const ids = new Set(
-      this.#store
-        .getSnapshot()
-        .annotations.filter(({ type }) => type !== "note")
-        .map(({ id }) => id),
+      this.#store.getSnapshot().annotations.map(({ id }) => id),
     );
     this.#selectedIds = new Set(
       [...this.#selectedIds].filter((id) => ids.has(id)),
@@ -1208,9 +1203,7 @@ export class SceneEditor {
   #render(): void {
     if (this.#destroyed) return;
     const snapshot = this.#store.getSnapshot();
-    const sceneAnnotations = snapshot.annotations.filter(
-      ({ type }) => type !== "note",
-    );
+    const sceneAnnotations = snapshot.annotations;
     if (this.#toolbar.hidden) {
       this.#anchorSignature = "";
       this.#renderer.render(

@@ -133,14 +133,6 @@ export const section5Scene = {
         "Anchored near right edge of drawing [5], right-aligned",
       intent: "place alongside the proposed header",
     },
-    {
-      id: "annotation-7",
-      type: "note",
-      geometry: { x: 0, y: 0, width: 0, height: 0 },
-      z: 0,
-      rotation: 0,
-      text: "Overall spacing feels cramped on mobile widths",
-    },
   ],
 } as const satisfies SceneSnapshot;
 
@@ -156,7 +148,7 @@ export const section5Expected = {
 - URL: http://localhost:5173/checkout
 - Viewport: 1440×900 @2x
 - Captured: 2026-07-09T14:32:00Z
-- Annotations: 4 element comments, 2 drawings, 1 note
+- Annotations: 4 element comments, 2 drawings
 
 ## Element comments
 
@@ -191,9 +183,6 @@ export const section5Expected = {
 ### [6] Text: "Log out"
 - Anchored near right edge of drawing [5], right-aligned
 - Doc coords: 1320,18 → 1408,46
-- Intent: place alongside the proposed header
-
-## General notes
-- [7] "Overall spacing feels cramped on mobile widths"`,
+- Intent: place alongside the proposed header`,
   json: JSON.stringify(jsonPayload, null, 2),
 } as const satisfies SerializedReview;

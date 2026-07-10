@@ -36,10 +36,9 @@ export const serializeReview: Serializer = (
   }));
   const elementPins = numbered.filter(isElementPin);
   const drawings = numbered.filter(isDrawing);
-  const notes = numbered.filter(({ annotation }) => annotation.type === "note");
 
   return {
-    markdown: serializeMarkdown(pageContext, elementPins, drawings, notes),
+    markdown: serializeMarkdown(pageContext, elementPins, drawings),
     json: JSON.stringify(
       {
         drawoverVersion: scene.version,
@@ -56,7 +55,6 @@ function serializeMarkdown(
   page: PageContext,
   elementPins: readonly NumberedAnnotation[],
   drawings: readonly NumberedAnnotation[],
-  notes: readonly NumberedAnnotation[],
 ): string {
   const lines = [
     `# UI Review — ${oneLine(page.pathname)} (drawover)`,
@@ -64,7 +62,7 @@ function serializeMarkdown(
     `- URL: ${oneLine(page.url)}`,
     `- Viewport: ${formatNumber(page.viewport.width)}×${formatNumber(page.viewport.height)} @${formatNumber(page.viewport.devicePixelRatio)}x`,
     `- Captured: ${oneLine(page.capturedAt)}`,
-    `- Annotations: ${countLabel(elementPins.length, "element comment")}, ${countLabel(drawings.length, "drawing")}, ${countLabel(notes.length, "note")}`,
+    `- Annotations: ${countLabel(elementPins.length, "element comment")}, ${countLabel(drawings.length, "drawing")}`,
     "",
     "## Element comments",
   ];
@@ -77,15 +75,6 @@ function serializeMarkdown(
   lines.push("", "## Drawings (proposed UI — these elements do NOT exist yet)");
   for (const item of drawings) {
     lines.push("", ...formatDrawing(item.annotation, item.number, drawings));
-  }
-
-  if (notes.length > 0) {
-    lines.push("", "## General notes");
-    for (const { annotation, number } of notes) {
-      if (annotation.type === "note") {
-        lines.push(`- [${String(number)}] "${quoted(annotation.text)}"`);
-      }
-    }
   }
 
   return lines.join("\n");
@@ -132,7 +121,6 @@ function formatDrawing(
     case "image":
       return formatImage(annotation, number, siblings);
     case "element-pin":
-    case "note":
       throw new Error(`Annotation ${annotation.id} is not a drawing.`);
   }
 }

@@ -106,11 +106,12 @@ function readSnapshot(
     return undefined;
   }
 
-  if (!isSceneSnapshot(candidate)) {
+  const snapshot = readSceneSnapshot(candidate);
+  if (!snapshot) {
     removeItem(storage, key);
     return undefined;
   }
-  return candidate;
+  return snapshot;
 }
 
 function writeSnapshot(
@@ -141,11 +142,16 @@ function removeItem(storage: Storage, key: string): void {
   }
 }
 
-function isSceneSnapshot(value: unknown): value is SceneSnapshot {
-  if (!isRecord(value) || value.version !== 1) return false;
-  return (
-    Array.isArray(value.annotations) && value.annotations.every(isAnnotation)
-  );
+/**
+ * Validate and normalize a persisted snapshot. Annotations that no longer
+ * validate (corrupt entries, retired types such as the removed general
+ * notes) are dropped individually so schema evolution never discards the
+ * rest of a stored scene.
+ */
+function readSceneSnapshot(value: unknown): SceneSnapshot | undefined {
+  if (!isRecord(value) || value.version !== 1) return undefined;
+  if (!Array.isArray(value.annotations)) return undefined;
+  return { version: 1, annotations: value.annotations.filter(isAnnotation) };
 }
 
 function isAnnotation(value: unknown): value is Annotation {
@@ -203,8 +209,6 @@ function isAnnotation(value: unknown): value is Annotation {
         isDocumentPoint(value.elementOffset) &&
         isOptionalString(value.spatialDescription)
       );
-    case "note":
-      return typeof value.text === "string";
     default:
       return false;
   }
