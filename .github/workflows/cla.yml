@@ -29,4 +29,4 @@ jobs:
           path-to-signatures: signatures/version1/cla.json
           path-to-document: https://github.com/janiorvalle/drawover/blob/main/CONTRIBUTING.md
           branch: signatures
-          allowlist: dependabot[bot]
+          allowlist: dependabot[bot],*[bot]
