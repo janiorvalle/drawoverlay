@@ -4,6 +4,10 @@ import { extname, join, relative } from "node:path";
 const root = new URL("../packages/drawover/src/", import.meta.url);
 const allowedCoordinateFile = "coordinates.ts";
 const allowedColorFile = join("theme", "tokens.ts");
+// Owner-approved exception: PNG capture may re-fetch assets the host page
+// already references (cache-first, bounded) to inline them into the export.
+// No other module may touch the network.
+const allowedCaptureNetworkFile = join("output", "png.ts");
 const forbidden = /\b(?:scrollX|scrollY|pageXOffset|pageYOffset)\b/;
 const forbiddenNetwork =
   /\b(?:fetch|XMLHttpRequest|WebSocket|EventSource|sendBeacon)\b/;
@@ -35,7 +39,10 @@ async function visit(directory) {
     if (entry.name !== allowedCoordinateFile && forbidden.test(source)) {
       violations.push(relativePath);
     }
-    if (forbiddenNetwork.test(source)) {
+    if (
+      relativePath !== allowedCaptureNetworkFile &&
+      forbiddenNetwork.test(source)
+    ) {
       networkViolations.push(relativePath);
     }
     if (relativePath !== allowedColorFile && forbiddenColor.test(source)) {

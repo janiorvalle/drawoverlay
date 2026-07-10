@@ -169,6 +169,9 @@ function isAnnotation(value: unknown): value is Annotation {
   switch (value.type) {
     case "rect":
       return (
+        (value.shape === undefined ||
+          value.shape === "rectangle" ||
+          value.shape === "ellipse") &&
         isStrings(value, "stroke", "fill") &&
         isFiniteNumber(value.strokeWidth) &&
         isOptionalString(value.label) &&
@@ -180,6 +183,9 @@ function isAnnotation(value: unknown): value is Annotation {
       );
     case "arrow":
       return (
+        (value.variant === undefined ||
+          value.variant === "arrow" ||
+          value.variant === "line") &&
         isDocumentPoint(value.start) &&
         isDocumentPoint(value.end) &&
         typeof value.color === "string" &&

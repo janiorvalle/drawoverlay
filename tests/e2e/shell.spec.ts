@@ -45,11 +45,11 @@ test("hostile host CSS does not break the shell", async ({ page }) => {
   await host.locator(".trigger").click();
 
   await expect(host.locator(".toolbar")).toBeVisible();
-  await expect(host.locator(".trigger")).toHaveCSS("width", "40px");
+  await expect(host.locator(".trigger")).toHaveCSS("width", "44px");
   await expect(host).toHaveCSS("z-index", "2147483647");
 });
 
-test("max-z host fixture remains below the usable Drawover chrome", async ({
+test("max-z host fixture remains below the usable drawover chrome", async ({
   page,
 }) => {
   await page.goto("/?fixture=max-z");

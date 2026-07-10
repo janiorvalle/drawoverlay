@@ -80,7 +80,7 @@ test("creates and transforms rectangles, arrows, and text", async ({
     "Move this section",
   );
 
-  await host.getByRole("button", { name: "Close Drawover" }).click();
+  await host.getByRole("button", { name: "Close drawover" }).click();
   await expect(scene.locator("[data-annotation-id]")).toHaveCount(0);
   await host.locator(".trigger").click();
   await expect(scene.locator("[data-annotation-id]")).toHaveCount(3);
@@ -96,7 +96,7 @@ test("closing or clearing from the toolbar cancels inline text entry", async ({
   const editor = host.getByRole("textbox", { name: "Annotation text" });
   await editor.fill("Uncommitted draft");
 
-  await host.getByRole("button", { name: "Close Drawover" }).click();
+  await host.getByRole("button", { name: "Close drawover" }).click();
   await expect(editor).toHaveCount(0);
   await host.locator(".trigger").click();
   await expect(scene.locator('[data-annotation-type="text"]')).toHaveCount(0);
@@ -233,6 +233,30 @@ test("inserts images from a file and clipboard paste", async ({ page }) => {
     );
   }
   await expect(images).toHaveCount(2);
+});
+
+test("draws ellipses and headless lines", async ({ page }) => {
+  const host = page.locator("#drawover-root");
+  const scene = host.locator('[data-layer="scene"]');
+
+  await tool(host, "ellipse").click();
+  await drag(page, { x: 40, y: 90 }, { x: 160, y: 170 });
+  const ellipse = scene.locator('[data-annotation-type="rect"] ellipse');
+  await expect(ellipse).toHaveCount(1);
+
+  await tool(host, "line").click();
+  await drag(page, { x: 205, y: 100 }, { x: 330, y: 175 });
+  const connector = scene.locator('[data-annotation-type="arrow"]');
+  await expect(connector).toHaveCount(1);
+  await expect(connector.locator("polygon")).toHaveCount(0);
+
+  // Both reuse the shared manipulation model: select and drag the line
+  // endpoint like an arrow.
+  const endpoint = scene.locator('[data-handle="arrow-end"]');
+  const lineElement = connector.locator("line").nth(1);
+  const oldEnd = await lineElement.getAttribute("x2");
+  await dragLocator(page, endpoint, { x: -30, y: 30 });
+  await expect(lineElement).not.toHaveAttribute("x2", oldEnd ?? "");
 });
 
 test("plain click on empty canvas returns pointer control to Comment mode", async ({

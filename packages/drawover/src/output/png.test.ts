@@ -188,14 +188,14 @@ describe("composited PNG output", () => {
     const overlayHost = harness.svg.getRootNode() as ShadowRoot;
     expect(options.filter(overlayHost.host)).toBe(false);
     expect(options.filter(document.createElement("main"))).toBe(true);
-    expect(options.filter(document.createElement("img"))).toBe(false);
+    expect(options.filter(document.createElement("img"))).toBe(true);
     expect(
       (harness.toCanvas.mock.calls[0]?.[1] as { skipFonts?: boolean })
         .skipFonts,
     ).toBe(true);
   });
 
-  it("restricts capture styles and media to local-only resources", async () => {
+  it("captures asset-bearing nodes and configures bounded, cache-first fetches", async () => {
     const harness = createHarness();
     await exportCompositedPng(
       { annotationSvg: harness.svg, page: harness.page },
@@ -203,58 +203,152 @@ describe("composited PNG output", () => {
     );
 
     const options = harness.toCanvas.mock.calls[0]?.[1] as {
+      fetchRequestInit?: RequestInit;
       filter: (node: Node) => boolean;
+      includeQueryParams?: boolean;
       includeStyleProperties: string[];
+      onImageErrorHandler?: () => void;
     };
     expect(options.includeStyleProperties).toContain("background-color");
-    // Gradients must survive capture (Tailwind v4 CTAs are gradient-only);
-    // url-bearing values are rejected per-value by the sanitizer instead of
-    // banning the property outright.
     expect(options.includeStyleProperties).toContain("background-image");
     expect(options.includeStyleProperties).not.toContain("background");
     expect(options.includeStyleProperties).not.toContain("mask");
+    // Asset inlining fetches must come from cache when possible, stop
+    // hanging captures, disambiguate query-string image endpoints, and
+    // degrade to a blank spot instead of failing the whole capture.
+    expect(options.fetchRequestInit?.cache).toBe("force-cache");
+    expect(options.includeQueryParams).toBe(true);
+    expect(options.onImageErrorHandler).toBeTypeOf("function");
+    expect(options.onImageErrorHandler?.()).toBeUndefined();
+
     const remoteImage = document.createElement("img");
     remoteImage.src = "https://assets.example.com/review.png";
-    const localImage = document.createElement("img");
-    localImage.src = "data:image/png;base64,AA==";
-    const responsiveImage = document.createElement("img");
-    responsiveImage.src = "data:image/png;base64,AA==";
-    responsiveImage.srcset = "https://assets.example.com/review-2x.png 2x";
     const remoteStyle = document.createElement("div");
     remoteStyle.style.backgroundImage =
       'url("https://assets.example.com/review-background.png")';
-    const remoteSvg = document.createElementNS(
+    const inlineSvg = document.createElementNS(
       "http://www.w3.org/2000/svg",
       "svg",
     );
-    const remoteSvgImage = document.createElementNS(
+    const strandedSvgChild = document.createElementNS(
       "http://www.w3.org/2000/svg",
-      "image",
-    );
-    remoteSvgImage.setAttribute(
-      "href",
-      "https://assets.example.com/review.svg",
-    );
-    remoteSvg.append(remoteSvgImage);
-    const localSvg = document.createElementNS(
-      "http://www.w3.org/2000/svg",
-      "svg",
-    );
-    localSvg.append(
-      document.createElementNS("http://www.w3.org/2000/svg", "circle"),
+      "circle",
     );
     const remoteVideo = document.createElement("video");
     Object.defineProperty(remoteVideo, "currentSrc", {
       value: "https://assets.example.com/review.mp4",
     });
-    expect(options.filter(remoteImage)).toBe(false);
-    expect(options.filter(localImage)).toBe(true);
-    expect(options.filter(responsiveImage)).toBe(false);
-    expect(options.filter(remoteStyle)).toBe(false);
-    expect(options.filter(remoteSvg)).toBe(false);
-    expect(options.filter(localSvg)).toBe(false);
+    expect(options.filter(remoteImage)).toBe(true);
+    expect(options.filter(remoteStyle)).toBe(true);
+    expect(options.filter(inlineSvg)).toBe(true);
+    expect(options.filter(strandedSvgChild)).toBe(false);
     expect(options.filter(remoteVideo)).toBe(false);
     expect(options.filter(document.createElement("style"))).toBe(false);
+    expect(options.filter(document.createElement("iframe"))).toBe(false);
+  });
+
+  it("keeps image sources for capture inlining and clears responsive candidates", async () => {
+    const harness = createHarness();
+    const page = document.createElement("main");
+    const remoteImage = document.createElement("img");
+    remoteImage.src = "https://assets.example.com/review.png";
+    remoteImage.dataset.fixture = "remote";
+    const localImage = document.createElement("img");
+    localImage.src = "data:image/png;base64,AA==";
+    localImage.srcset = "https://assets.example.com/review-2x.png 2x";
+    localImage.dataset.fixture = "local";
+    page.append(remoteImage, localImage);
+
+    await exportCompositedPng(
+      { annotationSvg: harness.svg, page },
+      harness.dependencies,
+    );
+
+    const capturePage = harness.toCanvas.mock.calls[0]?.[0];
+    const remoteClone = capturePage?.querySelector<HTMLImageElement>(
+      '[data-fixture="remote"]',
+    );
+    const localClone = capturePage?.querySelector<HTMLImageElement>(
+      '[data-fixture="local"]',
+    );
+    // The decoded bitmap is unreadable in this environment, so the rendered
+    // URL stays for the capture library to fetch and inline.
+    expect(remoteClone?.getAttribute("src")).toBe(
+      "https://assets.example.com/review.png",
+    );
+    expect(localClone?.getAttribute("src")).toBe("data:image/png;base64,AA==");
+    // A leftover srcset would let the standalone rasterization pick an
+    // external candidate over the inlined src.
+    expect(remoteClone?.srcset ?? "").toBe("");
+    expect(localClone?.srcset ?? "").toBe("");
+  });
+
+  it("rasterizes inline SVG standalone with sprite targets and styles inlined", async () => {
+    const harness = createHarness();
+    const sprite = document.createElementNS(
+      "http://www.w3.org/2000/svg",
+      "svg",
+    );
+    const symbol = document.createElementNS(
+      "http://www.w3.org/2000/svg",
+      "symbol",
+    );
+    symbol.id = "fixture-sprite-icon";
+    symbol.append(
+      document.createElementNS("http://www.w3.org/2000/svg", "path"),
+    );
+    sprite.append(symbol);
+    document.body.append(sprite);
+    const page = document.createElement("main");
+    const logo = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    logo.getBoundingClientRect = () =>
+      ({
+        bottom: 28,
+        height: 28,
+        left: 0,
+        right: 28,
+        top: 0,
+        width: 28,
+        x: 0,
+        y: 0,
+        toJSON: () => ({}),
+      }) satisfies DOMRect;
+    const shape = document.createElementNS(
+      "http://www.w3.org/2000/svg",
+      "rect",
+    );
+    shape.style.fill = "rgb(30, 70, 215)";
+    const spriteUse = document.createElementNS(
+      "http://www.w3.org/2000/svg",
+      "use",
+    );
+    spriteUse.setAttribute("href", "#fixture-sprite-icon");
+    logo.append(shape, spriteUse);
+    page.append(logo);
+
+    try {
+      await exportCompositedPng(
+        { annotationSvg: harness.svg, page },
+        harness.dependencies,
+      );
+    } finally {
+      sprite.remove();
+    }
+
+    const capturePage = harness.toCanvas.mock.calls[0]?.[0];
+    expect(capturePage?.querySelector("svg")).toBeNull();
+    const rasterized = capturePage?.querySelector<HTMLImageElement>("img");
+    const src = rasterized?.getAttribute("src") ?? "";
+    expect(src.startsWith("data:image/svg+xml")).toBe(true);
+    const markup = decodeURIComponent(src.split(",")[1] ?? "");
+    expect(markup).toContain('width="28"');
+    // Sprite targets living elsewhere in the document must serialize along,
+    // or `<use>` icons rasterize blank.
+    expect(markup).toContain("fixture-sprite-icon");
+    expect(markup).toContain("<defs>");
+    // CSS-driven presentation (icon-set pattern) must be inlined or the
+    // standalone serialization loses it.
+    expect(markup).toContain("fill: rgb(30, 70, 215)");
   });
 
   it("strips modern interpolation hints from captured gradients", () => {
@@ -279,17 +373,11 @@ describe("composited PNG output", () => {
     ).toBe("linear-gradient(rgb(1, 2, 3), rgb(4, 5, 6))");
   });
 
-  it("sanitizes a resource-bearing capture root before loading the dependency", async () => {
+  it("keeps page asset references while stripping inert legacy attributes", async () => {
     const harness = createHarness();
     const page = document.createElement("main");
     page.style.backgroundImage =
       'url("https://assets.example.com/review-background.png")';
-    const escapedStyle = document.createElement("div");
-    escapedStyle.dataset.escapedStyle = "true";
-    escapedStyle.setAttribute(
-      "style",
-      'background-image: \\75 rl("https://assets.example.com/escaped.png")',
-    );
     const customElement = document.createElement("capture-probe");
     customElement.textContent = "Inert custom element";
     const legacyBackground = document.createElement("table");
@@ -297,20 +385,24 @@ describe("composited PNG output", () => {
       "background",
       "/private/review-background.png",
     );
-    page.append(escapedStyle, customElement, legacyBackground);
+    page.append(customElement, legacyBackground);
+    document.body.append(page);
 
-    await exportCompositedPng(
-      { annotationSvg: harness.svg, page },
-      harness.dependencies,
-    );
+    try {
+      await exportCompositedPng(
+        { annotationSvg: harness.svg, page },
+        harness.dependencies,
+      );
+    } finally {
+      page.remove();
+    }
 
     const capturePage = harness.toCanvas.mock.calls[0]?.[0];
     expect(capturePage).not.toBe(page);
-    expect(capturePage?.style.backgroundImage).toBe("");
-    expect(
-      capturePage?.querySelector<HTMLElement>("[data-escaped-style]")?.style
-        .backgroundImage,
-    ).toBe("");
+    // Referenced backgrounds ride along for the capture library to inline.
+    expect(capturePage?.style.backgroundImage).toContain(
+      "review-background.png",
+    );
     expect(capturePage?.querySelector("capture-probe")).toBeNull();
     expect(capturePage?.textContent).toContain("Inert custom element");
     expect(

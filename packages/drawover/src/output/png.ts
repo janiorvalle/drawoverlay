@@ -6,9 +6,12 @@ interface ScreenshotLibrary {
     node: HTMLElement,
     options: {
       backgroundColor?: string;
+      fetchRequestInit?: RequestInit;
       filter: (node: Node) => boolean;
       height: number;
+      includeQueryParams?: boolean;
       includeStyleProperties?: string[];
+      onImageErrorHandler?: (...attributes: unknown[]) => void;
       pixelRatio: number;
       skipFonts?: boolean;
       width: number;
@@ -19,7 +22,7 @@ interface ScreenshotLibrary {
 export interface CompositedPngOptions {
   /** Host-page root to capture. Defaults to the document element. */
   page?: HTMLElement;
-  /** The rendered scene SVG. It may live inside Drawover's Shadow DOM. */
+  /** The rendered scene SVG. It may live inside drawover's Shadow DOM. */
   annotationSvg: SVGSVGElement;
   backgroundColor?: string;
   pixelRatio?: number;
@@ -37,6 +40,25 @@ const defaultDependencies: PngExportDependencies = {
   loadSvgImage,
   encodePng,
 };
+
+/**
+ * Capture may re-request assets the host page already references so they can
+ * be inlined into the PNG (the rasterizer renders through an SVG image,
+ * which cannot load external URLs). Requests are cache-first and bounded:
+ * a slow or dead asset costs its own pixels, never the capture.
+ */
+const ASSET_FETCH_TIMEOUT_MS = 3_000;
+
+function assetFetchInit(): RequestInit {
+  const init: RequestInit = { cache: "force-cache" };
+  if (
+    typeof AbortSignal !== "undefined" &&
+    typeof AbortSignal.timeout === "function"
+  ) {
+    init.signal = AbortSignal.timeout(ASSET_FETCH_TIMEOUT_MS);
+  }
+  return init;
+}
 
 const CAPTURE_STYLE_PROPERTIES = [
   "accent-color",
@@ -203,12 +225,19 @@ export async function exportCompositedPng(
   try {
     canvas = await library.toCanvas(capturePage, {
       backgroundColor,
+      fetchRequestInit: assetFetchInit(),
       filter: (node) =>
         node !== overlayHost &&
         isCaptureSafeNode(node) &&
         (options.filter?.(node) ?? true),
       height,
+      // Next-style image endpoints differ only by query string; without this
+      // the library's URL cache would hand every image the first one's bytes.
+      includeQueryParams: true,
       includeStyleProperties: CAPTURE_STYLE_PROPERTIES,
+      // Without a handler the library rejects the whole capture when one
+      // image fails to inline; a missing asset must degrade to a blank spot.
+      onImageErrorHandler: () => undefined,
       pixelRatio,
       skipFonts: true,
       width,
@@ -349,7 +378,7 @@ function createCapturePage(
 ): HTMLElement {
   const clone = cloneCaptureNode(page, include, true);
   if (!(clone instanceof HTMLElement)) {
-    throw new Error("Could not create a local-only host-page snapshot.");
+    throw new Error("Could not create the host-page snapshot.");
   }
   return clone;
 }
@@ -361,6 +390,8 @@ function cloneCaptureNode(
 ): Node | undefined {
   if (!isRoot && !include(source)) return undefined;
   if (source instanceof HTMLCanvasElement) return cloneCanvas(source);
+  if (source instanceof HTMLImageElement) return cloneImage(source);
+  if (source instanceof SVGSVGElement) return cloneInlineSvg(source);
   if (!(source instanceof Element)) return source.cloneNode(false);
 
   const clone =
@@ -396,6 +427,130 @@ function cloneCanvas(source: HTMLCanvasElement): HTMLImageElement | undefined {
   }
 }
 
+/**
+ * Reuse the already-decoded bitmap when the browser lets us read it (same
+ * origin, or CORS-cleared). Otherwise keep the rendered URL and let the
+ * capture library request and inline it — cache-first, so a displayed image
+ * rarely costs a round trip. Cross-origin images without CORS stay missing:
+ * the bitmap is unreadable and the request is blocked.
+ */
+function cloneImage(source: HTMLImageElement): HTMLImageElement {
+  const clone = source.cloneNode(false) as HTMLImageElement;
+  sanitizeClone(source, clone);
+  const rendered = source.currentSrc || source.src;
+  if (!rendered) return clone;
+  clone.src = isLocalResource(rendered)
+    ? rendered
+    : (snapshotImagePixels(source) ?? rendered);
+  return clone;
+}
+
+function snapshotImagePixels(source: HTMLImageElement): string | undefined {
+  if (!source.complete || source.naturalWidth === 0) return undefined;
+  const canvas = document.createElement("canvas");
+  canvas.width = source.naturalWidth;
+  canvas.height = source.naturalHeight;
+  const context = canvas.getContext("2d");
+  if (!context) return undefined;
+  try {
+    context.drawImage(source, 0, 0);
+    // A cross-origin bitmap without CORS clearance taints the canvas and
+    // this read throws; the caller falls back to fetching the URL.
+    return canvas.toDataURL();
+  } catch {
+    return undefined;
+  }
+}
+
+const SVG_PRESENTATION_PROPERTIES = [
+  "color",
+  "display",
+  "fill",
+  "fill-opacity",
+  "fill-rule",
+  "opacity",
+  "stop-color",
+  "stop-opacity",
+  "stroke",
+  "stroke-dasharray",
+  "stroke-dashoffset",
+  "stroke-linecap",
+  "stroke-linejoin",
+  "stroke-miterlimit",
+  "stroke-opacity",
+  "stroke-width",
+  "visibility",
+];
+
+/**
+ * Host-page SVG (inline logos, icon sets) rasterizes through the same
+ * standalone data-URI path as the annotation layer. External references
+ * inside it cannot load in that context, so it is inert by construction —
+ * but presentation usually comes from host CSS (`stroke: currentColor` icon
+ * sets), which a standalone serialization loses. Inline the computed
+ * presentation styles before serializing.
+ */
+function cloneInlineSvg(source: SVGSVGElement): HTMLImageElement | undefined {
+  const bounds = source.getBoundingClientRect();
+  if (bounds.width === 0 || bounds.height === 0) return undefined;
+  const svg = source.cloneNode(true) as SVGSVGElement;
+  inlineSvgPresentation(source, svg);
+  inlineSpriteReferences(source, svg);
+  for (const element of svg.querySelectorAll("foreignObject, script")) {
+    element.remove();
+  }
+  svg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+  svg.setAttribute("width", String(bounds.width));
+  svg.setAttribute("height", String(bounds.height));
+  const clone = document.createElement("img");
+  sanitizeClone(source, clone);
+  const markup = new XMLSerializer().serializeToString(svg);
+  clone.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(markup)}`;
+  return clone;
+}
+
+function inlineSvgPresentation(
+  source: SVGSVGElement,
+  clone: SVGSVGElement,
+): void {
+  const sourceElements = [source, ...source.querySelectorAll("*")];
+  const cloneElements = [clone, ...clone.querySelectorAll("*")];
+  for (const [index, sourceElement] of sourceElements.entries()) {
+    const cloneElement = cloneElements[index];
+    if (!(cloneElement instanceof SVGElement)) continue;
+    const computed = window.getComputedStyle(sourceElement);
+    for (const property of SVG_PRESENTATION_PROPERTIES) {
+      const value = computed.getPropertyValue(property);
+      if (value) cloneElement.style.setProperty(property, value);
+    }
+  }
+}
+
+/**
+ * Icon sprites (`<use href="#id">` pointing into a hidden sheet elsewhere in
+ * the document) lose their target when one svg serializes alone; pull the
+ * referenced document nodes into local defs.
+ */
+function inlineSpriteReferences(
+  source: SVGSVGElement,
+  clone: SVGSVGElement,
+): void {
+  const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+  const inlined = new Set<string>();
+  for (const reference of clone.querySelectorAll("use")) {
+    const href =
+      reference.getAttribute("href") ??
+      reference.getAttribute("xlink:href") ??
+      "";
+    if (!href.startsWith("#") || inlined.has(href)) continue;
+    inlined.add(href);
+    const target = source.ownerDocument.getElementById(href.slice(1));
+    if (!target || source.contains(target)) continue;
+    defs.append(target.cloneNode(true));
+  }
+  if (defs.childNodes.length > 0) clone.append(defs);
+}
+
 function sanitizeClone(source: Element, clone: Element): void {
   for (const attribute of [...clone.attributes]) {
     const name = attribute.name.toLowerCase();
@@ -405,7 +560,6 @@ function sanitizeClone(source: Element, clone: Element): void {
       name === "style" ||
       name === "srcset" ||
       name.startsWith("on") ||
-      !isSafeStyleValue(attribute.value) ||
       ([
         "archive",
         "background",
@@ -434,7 +588,7 @@ function sanitizeClone(source: Element, clone: Element): void {
     const computed = window.getComputedStyle(source);
     for (const property of CAPTURE_STYLE_PROPERTIES) {
       const value = computed.getPropertyValue(property);
-      if (value && isSafeStyleValue(value)) {
+      if (value) {
         clone.style.setProperty(property, normalizeCaptureStyle(value));
       }
     }
@@ -476,18 +630,8 @@ export function normalizeCaptureStyle(value: string): string {
     .replace(/\(\s*,\s*/g, "(");
 }
 
-function isSafeStyleValue(value: string): boolean {
-  return !/\b(?:-webkit-)?image-set\s*\(|\burl\s*\(|(?:https?:)?\/\//i.test(
-    value,
-  );
-}
-
 function isCaptureSafeNode(node: Node): boolean {
   if (!(node instanceof Element)) return true;
-  const inlineStyle = node.getAttribute("style") ?? "";
-  if (/\b(?:-webkit-)?image-set\s*\(|\burl\s*\(/i.test(inlineStyle)) {
-    return false;
-  }
   if (
     [
       "audio",
@@ -505,45 +649,19 @@ function isCaptureSafeNode(node: Node): boolean {
       "source",
       "style",
       "track",
-      "use",
       "video",
     ].includes(node.localName)
   ) {
     return false;
   }
-  if (node instanceof SVGElement) return false;
-  if (node instanceof HTMLImageElement) {
-    return (
-      isLocalResource(node.src) &&
-      (node.currentSrc === "" || isLocalResource(node.currentSrc)) &&
-      node.srcset.trim() === ""
-    );
-  }
-  if (
-    node instanceof HTMLInputElement &&
-    node.type === "image" &&
-    !isLocalResource(node.src)
-  ) {
-    return false;
-  }
-  if (node.localName === "use") {
-    const href = node.getAttribute("href") ?? node.getAttribute("xlink:href");
-    if (href && !href.startsWith("#") && !isLocalResource(href)) return false;
-  }
-  return (
-    !hasResourcePseudo(node, "::before") && !hasResourcePseudo(node, "::after")
-  );
+  // Inline SVG roots rasterize separately; their content never reaches the
+  // clone walk, and stray non-root SVG elements cannot render alone.
+  if (node instanceof SVGElement) return node instanceof SVGSVGElement;
+  return true;
 }
 
 function isLocalResource(value: string): boolean {
   return value.startsWith("blob:") || value.startsWith("data:");
-}
-
-function hasResourcePseudo(
-  element: Element,
-  pseudo: "::after" | "::before",
-): boolean {
-  return window.getComputedStyle(element, pseudo).content.includes("url(");
 }
 
 async function loadSvgImage(svg: SVGSVGElement): Promise<HTMLImageElement> {

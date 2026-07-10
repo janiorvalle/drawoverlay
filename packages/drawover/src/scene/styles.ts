@@ -66,7 +66,7 @@ export const sceneStyles = `
 }
 
 .toolbar {
-  max-width: min(1060px, calc(100vw - 72px));
+  max-width: min(1240px, calc(100vw - 72px));
   flex-wrap: wrap;
 }
 
@@ -84,8 +84,8 @@ export const sceneStyles = `
 .z-tools button {
   position: relative;
   display: grid;
-  width: 28px;
-  height: 28px;
+  width: 31px;
+  height: 31px;
   padding: 0;
   place-items: center;
   color: var(--dv-muted);
@@ -130,8 +130,8 @@ export const sceneStyles = `
 }
 
 .palette button {
-  width: 14px;
-  height: 14px;
+  width: 15px;
+  height: 15px;
   padding: 0;
   border: 0;
   border-radius: 50%;
@@ -145,7 +145,7 @@ export const sceneStyles = `
 
 .palette button[data-fill-toggle='true'] {
   width: auto;
-  height: 22px;
+  height: 24px;
   padding: 0 7px;
   border: 1px solid var(--dv-border);
   border-radius: 5px;

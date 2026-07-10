@@ -131,6 +131,14 @@ app.innerHTML = `
       </article>
     </div>
   </section>
+  <section class="brand-assets" aria-label="Brand assets fixture">
+    <h2>Brand assets</h2>
+    <img data-testid="capture-logo" src="/brand-mark.png" alt="Northstar mark" width="28" height="28" />
+    <svg data-testid="capture-svg-logo" width="28" height="28" viewBox="0 0 28 28" role="img" aria-label="Northstar vector mark">
+      <rect class="svg-logo-shape" x="2" y="2" width="24" height="24" rx="4"></rect>
+    </svg>
+    <span data-testid="capture-background-badge" class="background-badge" role="img" aria-label="Northstar badge"></span>
+  </section>
   ${
     fixture === "max-z"
       ? '<div class="host-max-z" data-testid="max-z-hostile">Host app at max z-index</div>'

@@ -85,17 +85,32 @@ function renderAnnotation(
 
   switch (annotation.type) {
     case "rect": {
-      const rect = svgElement("rect");
-      setAttributes(rect, {
-        x: viewportGeometry.x,
-        y: viewportGeometry.y,
-        width: viewportGeometry.width,
-        height: viewportGeometry.height,
+      const paint = {
         fill: annotation.fill,
         stroke: annotation.stroke,
         "stroke-width": annotation.strokeWidth,
-      });
-      group.append(rect);
+      };
+      if (annotation.shape === "ellipse") {
+        const ellipse = svgElement("ellipse");
+        setAttributes(ellipse, {
+          cx: viewportGeometry.x + viewportGeometry.width / 2,
+          cy: viewportGeometry.y + viewportGeometry.height / 2,
+          rx: viewportGeometry.width / 2,
+          ry: viewportGeometry.height / 2,
+          ...paint,
+        });
+        group.append(ellipse);
+      } else {
+        const rect = svgElement("rect");
+        setAttributes(rect, {
+          x: viewportGeometry.x,
+          y: viewportGeometry.y,
+          width: viewportGeometry.width,
+          height: viewportGeometry.height,
+          ...paint,
+        });
+        group.append(rect);
+      }
       if (annotation.label) {
         const label = svgElement("text");
         const align = annotation.labelAlign ?? "center";
@@ -252,6 +267,7 @@ function renderArrow(annotation: ArrowAnnotation): SVGElement[] {
     x: end.x - size * Math.cos(angle + Math.PI / 6),
     y: end.y - size * Math.sin(angle + Math.PI / 6),
   };
+  if (annotation.variant === "line") return [hitTarget, line];
   const head = svgElement("polygon");
   setAttributes(head, {
     points: [

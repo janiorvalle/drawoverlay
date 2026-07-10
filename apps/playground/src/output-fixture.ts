@@ -1,9 +1,10 @@
 import type { PageContext, SceneSnapshot } from "drawover";
 
 interface OutputApi {
-  copyReview: typeof import("drawover").copyReview;
+  copyReviewImage: typeof import("drawover").copyReviewImage;
   exportCompositedPng: typeof import("drawover").exportCompositedPng;
   serializeReview: typeof import("drawover").serializeReview;
+  writeReviewToClipboard: typeof import("drawover").writeReviewToClipboard;
   viewportRectToDocument: typeof import("drawover").viewportRectToDocument;
 }
 
@@ -38,19 +39,11 @@ export function installOutputFixture(api: OutputApi): void {
 
   fixture.copyReview.addEventListener("click", () => {
     void run(fixture, async () => {
-      const result = await api.copyReview(
+      await api.writeReviewToClipboard(
         api.serializeReview(scene, pageContext()),
-        () =>
-          api.exportCompositedPng({
-            annotationSvg,
-            backgroundColor: "#eef1f5",
-            page: document.body,
-          }),
+        "markdown",
       );
-      fixture.status.textContent =
-        result === "markdown+png"
-          ? "Copied review + image"
-          : "Copied review (Markdown only)";
+      fixture.status.textContent = "Markdown copied";
     });
   });
   fixture.exportPng.addEventListener("click", () => {

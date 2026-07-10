@@ -31,10 +31,8 @@ test("annotates, edits, copies, reloads, and clears a mixed review", async ({
   await expect(pin).toHaveAttribute("data-annotation-number", "1");
   await expect(rectangle).toHaveAttribute("data-annotation-number", "2");
 
-  await host.getByRole("button", { name: "Copy review" }).click();
-  await expect(host.locator(".command-status")).toHaveText(
-    "Copied review + image",
-  );
+  await host.getByRole("button", { name: "Copy Markdown" }).click();
+  await expect(host.locator(".command-status")).toHaveText("Markdown copied");
   const markdown = await page.evaluate(() => navigator.clipboard.readText());
   expect(markdown).toContain("## Element comments");
   expect(markdown).toContain('### [1] "Disable until validation passes"');
@@ -75,12 +73,12 @@ test("annotates, edits, copies, reloads, and clears a mixed review", async ({
   ).toHaveCount(0);
 });
 
-test("one-press copy puts Markdown and a composited PNG on the clipboard", async ({
+test("copies the Markdown and the annotated PNG from separate buttons", async ({
   page,
 }) => {
-  let exportAssetRequests = 0;
+  const remoteAssetRequests: string[] = [];
   await page.route("https://assets.example.com/**", async (route) => {
-    exportAssetRequests += 1;
+    remoteAssetRequests.push(route.request().url());
     await route.abort();
   });
   await page.goto("/phase-2-png");
@@ -143,7 +141,7 @@ test("one-press copy puts Markdown and a composited PNG on the clipboard", async
     name: "review.txt",
   });
   await page.waitForTimeout(100);
-  exportAssetRequests = 0;
+  remoteAssetRequests.length = 0;
   const host = page.locator("#drawover-root");
   await host.locator(".trigger").click();
   await host.getByRole("button", { name: "Use the annotation scene" }).click();
@@ -160,13 +158,36 @@ test("one-press copy puts Markdown and a composited PNG on the clipboard", async
   if (!submitBounds) throw new Error("Checkout button was not visible.");
   const gradientBounds = await page.getByTestId("gradient-cta").boundingBox();
   if (!gradientBounds) throw new Error("Gradient button was not visible.");
+  const logoBounds = await page.getByTestId("capture-logo").boundingBox();
+  if (!logoBounds) throw new Error("Logo image was not visible.");
+  const svgLogoBounds = await page
+    .getByTestId("capture-svg-logo")
+    .boundingBox();
+  if (!svgLogoBounds) throw new Error("SVG logo was not visible.");
+  const badgeBounds = await page
+    .getByTestId("capture-background-badge")
+    .boundingBox();
+  if (!badgeBounds) throw new Error("Background badge was not visible.");
   const pixelRatio = await page.evaluate(() => window.devicePixelRatio);
 
-  await host.getByRole("button", { name: "Copy review" }).click();
-  await expect(host.locator(".command-status")).toHaveText(
-    "Copied review + image",
+  await host.getByRole("button", { name: "Copy image" }).click();
+  await expect(host.locator(".command-status")).toHaveText("Image copied");
+  // Capture may re-fetch assets the page references, so they inline into
+  // the PNG — and nothing beyond them: the href inside inline SVG must stay
+  // untouched. The legacy background attribute surfaces as a computed
+  // background-image, so it counts as referenced. The aborted background
+  // proves a dead asset costs its own pixels, never the copy.
+  const referencedRemoteAssets = new Set([
+    "https://assets.example.com/remote-background.png",
+    "https://assets.example.com/remote-2x.png",
+    "https://assets.example.com/legacy-background.png",
+  ]);
+  expect(remoteAssetRequests).toContain(
+    "https://assets.example.com/remote-background.png",
   );
-  expect(exportAssetRequests).toBe(0);
+  expect(
+    remoteAssetRequests.filter((url) => !referencedRemoteAssets.has(url)),
+  ).toEqual([]);
   await expect(page.locator("body")).toHaveAttribute(
     "data-capture-connections",
     "1",
@@ -185,39 +206,33 @@ test("one-press copy puts Markdown and a composited PNG on the clipboard", async
     }
     throw new Error("Clipboard has no image/png item.");
   });
+  const imageTypes = await page.evaluate(async () => {
+    const items = await navigator.clipboard.read();
+    return items.flatMap((item) => [...item.types]);
+  });
+  expect(imageTypes).not.toContain("text/plain");
+
+  await host.getByRole("button", { name: "Copy Markdown" }).click();
+  await expect(host.locator(".command-status")).toHaveText("Markdown copied");
   const clipboardText = await page.evaluate(() =>
     navigator.clipboard.readText(),
   );
   expect(clipboardText).toContain("## Drawings");
-
-  // Flavor chips appear after the combined copy; each re-copies one flavor
-  // for paste targets that grabbed the wrong one.
-  await host.getByRole("button", { name: "Copy Markdown only" }).click();
-  await expect(host.locator(".command-status")).toHaveText("Markdown copied");
-  const textOnly = await page.evaluate(async () => {
-    const items = await navigator.clipboard.read();
-    return {
-      types: items.flatMap((item) => [...item.types]),
-      text: await navigator.clipboard.readText(),
-    };
-  });
-  expect(textOnly.types).not.toContain("image/png");
-  expect(textOnly.text).toContain("## Drawings");
-
-  await host.getByRole("button", { name: "Copy image only" }).click();
-  await expect(host.locator(".command-status")).toHaveText("Image copied");
-  const imageOnly = await page.evaluate(async () => {
-    const items = await navigator.clipboard.read();
-    return items.flatMap((item) => [...item.types]);
-  });
-  expect(imageOnly).toContain("image/png");
-  expect(imageOnly).not.toContain("text/plain");
   const png = Buffer.from(pngBase64, "base64");
   expect([...png.subarray(0, 8)]).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
   expect(png.byteLength).toBeGreaterThan(2_000);
 
   const pixels = await page.evaluate(
-    async ({ background, dataUrl, gradient, host, ratio }) => {
+    async ({
+      background,
+      badge,
+      dataUrl,
+      gradient,
+      host,
+      logo,
+      ratio,
+      svgLogo,
+    }) => {
       const image = new Image();
       image.src = dataUrl;
       await image.decode();
@@ -294,25 +309,71 @@ test("one-press copy puts Markdown and a composited PNG on the clipboard", async
           }
         }
       }
+      // Logo archetypes: a served bitmap, an inline SVG styled from CSS, and
+      // a CSS background-image must all land in the capture.
+      const countInBounds = (
+        bounds: { x: number; y: number; width: number; height: number },
+        match: (red: number, green: number, blue: number) => boolean,
+      ) => {
+        let matches = 0;
+        for (let y = bounds.y; y <= bounds.y + bounds.height; y += 1) {
+          for (let x = bounds.x; x <= bounds.x + bounds.width; x += 1) {
+            const [red, green, blue] = sample(x, y);
+            if (
+              red !== undefined &&
+              green !== undefined &&
+              blue !== undefined &&
+              match(red, green, blue)
+            ) {
+              matches += 1;
+            }
+          }
+        }
+        return matches;
+      };
+      const logoPixels = countInBounds(
+        logo,
+        (red, green, blue) =>
+          red >= 170 && red <= 225 && green < 60 && blue >= 95 && blue <= 145,
+      );
+      const svgLogoPixels = countInBounds(
+        svgLogo,
+        (red, green, blue) =>
+          red < 60 && green >= 40 && green <= 100 && blue > 180,
+      );
+      const badgePixels = countInBounds(
+        badge,
+        (red, green, blue) =>
+          red < 50 && green >= 125 && green <= 180 && blue >= 60 && blue <= 115,
+      );
       return {
         annotationPixels,
+        badgePixels,
         gradientPixels,
         hostCenter: sample(host.x + host.width / 2, host.y + host.height / 2),
         hostPixels,
+        logoPixels,
         page: sample(8, 150),
+        svgLogoPixels,
       };
     },
     {
       background: badgePoint,
+      badge: badgeBounds,
       dataUrl: `data:image/png;base64,${png.toString("base64")}`,
       gradient: gradientBounds,
       host: submitBounds,
+      logo: logoBounds,
       ratio: pixelRatio,
+      svgLogo: svgLogoBounds,
     },
   );
   expect(pixels.annotationPixels).toBeGreaterThan(20);
   expect(pixels.hostPixels).toBeGreaterThan(500);
   expect(pixels.gradientPixels).toBeGreaterThan(500);
+  expect(pixels.logoPixels).toBeGreaterThan(200);
+  expect(pixels.svgLogoPixels).toBeGreaterThan(200);
+  expect(pixels.badgePixels).toBeGreaterThan(200);
   expect(pixels.hostCenter.slice(0, 3)).toEqual([19, 111, 99]);
   expect(pixels.page.slice(0, 3)).toEqual([238, 241, 245]);
 });

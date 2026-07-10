@@ -12,7 +12,6 @@ import {
 } from "./persistence/persistence.js";
 import { createSceneStore } from "./scene/store.js";
 import {
-  copyReview as copySceneReview,
   copyReviewImage as copySceneReviewImage,
   exportCompositedPng as exportScenePng,
   serializeReview,
@@ -35,7 +34,7 @@ export {
   viewportToDocument,
 } from "./coordinates.js";
 export {
-  copyReview,
+  copyReviewImage,
   exportCompositedPng,
   serializeReview,
   writeReviewToClipboard,
@@ -44,7 +43,6 @@ export type {
   ClipboardFormat,
   ClipboardWriter,
   CompositedPngOptions,
-  CopyReviewResult,
   PngExportDependencies,
 } from "./output/index.js";
 export type {
@@ -57,7 +55,7 @@ export type {
 
 let activeInstance: DrawoverInstance | undefined;
 
-/** Mount the singleton Drawover shell into an open Shadow DOM. */
+/** Mount the singleton drawover shell into an open Shadow DOM. */
 export function init(options: DrawoverOptions = {}): DrawoverInstance {
   if (activeInstance) return activeInstance;
 
@@ -73,19 +71,7 @@ export function init(options: DrawoverOptions = {}): DrawoverInstance {
     ...options,
     sceneStore: store,
     onClear: () => persistence.clear(),
-    onCopy: async () => {
-      const review = serializeReview(store.getSnapshot(), capturePageContext());
-      const result = await copySceneReview(review, () => {
-        if (!sceneLayer) {
-          throw new Error("The annotation scene is unavailable.");
-        }
-        return exportScenePng({ annotationSvg: sceneLayer });
-      });
-      return result === "markdown+png"
-        ? "Copied review + image"
-        : "Copied review (Markdown only)";
-    },
-    onCopyFlavor: async (flavor) => {
+    onCopy: async (flavor) => {
       if (flavor === "markdown") {
         const review = serializeReview(
           store.getSnapshot(),
@@ -114,7 +100,7 @@ export function init(options: DrawoverOptions = {}): DrawoverInstance {
   const toolbar = shadow?.querySelector<HTMLElement>(".toolbar");
   if (!host || !shadow || !sceneLayer || !toolbar) {
     shell.destroy();
-    throw new Error("Drawover scene could not attach to the shell.");
+    throw new Error("drawover scene could not attach to the shell.");
   }
   const sceneEditor: SceneEditor = createSceneEditor({
     host,

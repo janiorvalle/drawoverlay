@@ -27,10 +27,8 @@ export interface DrawoverInstance {
 interface CreateShellOptions extends DrawoverOptions {
   sceneStore: SceneStore;
   onClear: () => void;
-  /** Copies the review; resolves with the status message to display. */
-  onCopy: () => Promise<string>;
-  /** Copies one flavor for paste targets that prefer the other. */
-  onCopyFlavor: (flavor: "markdown" | "image") => Promise<string>;
+  /** Copies one representation; resolves with the status message. */
+  onCopy: (flavor: "markdown" | "image") => Promise<string>;
   onDestroy: () => void;
 }
 
@@ -69,10 +67,10 @@ export function createShell(options: CreateShellOptions): DrawoverInstance {
 
   const chrome = document.createElement("div");
   chrome.className = "chrome";
-  const trigger = button("", "Toggle Drawover");
+  const trigger = button("", "Toggle drawover");
   trigger.append(logoMark());
   trigger.className = "trigger";
-  trigger.title = `Toggle Drawover (${formatHotkey(options.hotkey ?? "alt+shift+d")})`;
+  trigger.title = `Toggle drawover (${formatHotkey(options.hotkey ?? "alt+shift+d")})`;
   trigger.setAttribute("aria-expanded", "false");
   trigger.setAttribute("aria-controls", "drawover-toolbar");
 
@@ -80,7 +78,7 @@ export function createShell(options: CreateShellOptions): DrawoverInstance {
   toolbar.id = "drawover-toolbar";
   toolbar.className = "toolbar";
   toolbar.setAttribute("role", "toolbar");
-  toolbar.setAttribute("aria-label", "Drawover tools");
+  toolbar.setAttribute("aria-label", "drawover tools");
   toolbar.hidden = true;
 
   const brand = document.createElement("span");
@@ -99,26 +97,21 @@ export function createShell(options: CreateShellOptions): DrawoverInstance {
   sceneButton.dataset.mode = "scene";
   modes.append(inspectButton, sceneButton);
 
-  const copyButton = button("", "Copy review");
+  const copyButton = button("", "Copy Markdown");
   applyIcon(copyButton, "copy");
   copyButton.className = "command";
-  copyButton.dataset.command = "copy-review";
-  copyButton.dataset.tip = "Copy review · Markdown + PNG";
-  const flavorChips = document.createElement("span");
-  flavorChips.className = "flavor-chips";
-  flavorChips.hidden = true;
-  const textChip = button("Text", "Copy Markdown only");
-  textChip.className = "flavor-chip";
-  textChip.dataset.tip = "Re-copy just the Markdown";
-  const imageChip = button("Image", "Copy image only");
-  imageChip.className = "flavor-chip";
-  imageChip.dataset.tip = "Re-copy just the PNG";
-  flavorChips.append(textChip, imageChip);
+  copyButton.dataset.command = "copy-markdown";
+  copyButton.dataset.tip = "Copy Markdown";
+  const copyImageButton = button("", "Copy image");
+  applyIcon(copyImageButton, "camera");
+  copyImageButton.className = "command";
+  copyImageButton.dataset.command = "copy-image";
+  copyImageButton.dataset.tip = "Copy image · annotated PNG";
   const clearButton = button("", "Clear annotations");
   applyIcon(clearButton, "trash");
   clearButton.className = "command";
   clearButton.dataset.tip = "Clear all";
-  const closeButton = button("", "Close Drawover");
+  const closeButton = button("", "Close drawover");
   applyIcon(closeButton, "close");
   closeButton.className = "close";
   closeButton.title = "Close";
@@ -130,12 +123,13 @@ export function createShell(options: CreateShellOptions): DrawoverInstance {
   const commandBar = document.createElement("span");
   commandBar.className = "command-bar";
   commandBar.hidden = true;
-  commandBar.append(commandStatus, flavorChips);
+  commandBar.append(commandStatus);
   toolbar.append(
     brand,
     modes,
     separator(),
     copyButton,
+    copyImageButton,
     clearButton,
     separator(),
     closeButton,
@@ -189,9 +183,9 @@ export function createShell(options: CreateShellOptions): DrawoverInstance {
     );
   };
 
-  const requestCopy = async (): Promise<string> => {
-    emit("copy-request");
-    return options.onCopy();
+  const requestCopy = async (flavor: "markdown" | "image"): Promise<string> => {
+    emit("copy-request", { flavor });
+    return options.onCopy(flavor);
   };
 
   const runCommand = async (
@@ -230,22 +224,13 @@ export function createShell(options: CreateShellOptions): DrawoverInstance {
   inspectButton.addEventListener("click", () => setMode("element-select"));
   sceneButton.addEventListener("click", () => setMode("scene"));
   copyButton.addEventListener("click", () => {
-    void runCommand(copyButton, "Copying...", requestCopy)
-      .then(() => {
-        // Some paste targets only take one flavor of the combined item;
-        // reveal one-click re-copies for the other flavor.
-        flavorChips.hidden = false;
-      })
-      .catch(() => undefined);
-  });
-  textChip.addEventListener("click", () => {
-    void runCommand(textChip, "Copying...", async () =>
-      options.onCopyFlavor("markdown"),
+    void runCommand(copyButton, "Copying...", async () =>
+      requestCopy("markdown"),
     ).catch(() => undefined);
   });
-  imageChip.addEventListener("click", () => {
-    void runCommand(imageChip, "Copying...", async () =>
-      options.onCopyFlavor("image"),
+  copyImageButton.addEventListener("click", () => {
+    void runCommand(copyImageButton, "Copying...", async () =>
+      requestCopy("image"),
     ).catch(() => undefined);
   });
   clearButton.addEventListener("click", requestClear);
@@ -256,7 +241,7 @@ export function createShell(options: CreateShellOptions): DrawoverInstance {
     open: () => setOpen(true),
     close: () => setOpen(false),
     copy: async () => {
-      await requestCopy();
+      await requestCopy("markdown");
     },
     clear: requestClear,
     destroy: () => {

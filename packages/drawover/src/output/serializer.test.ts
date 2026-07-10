@@ -220,6 +220,70 @@ describe("output serializer", () => {
     expect(markdown).not.toContain("## General notes");
   });
 
+  it("titles ellipses and lines by their drawn shape", () => {
+    const scene = {
+      version: 1,
+      annotations: [
+        {
+          id: "halo",
+          type: "rect",
+          shape: "ellipse",
+          geometry: { x: 10, y: 10, width: 120, height: 80 },
+          z: 1,
+          rotation: 0,
+          stroke: "#2563eb",
+          fill: "transparent",
+          strokeWidth: 3,
+          label: "focus here",
+          spatialDescription: "test placement",
+        },
+        {
+          id: "divider",
+          type: "arrow",
+          variant: "line",
+          geometry: { x: 10, y: 120, width: 200, height: 2 },
+          z: 2,
+          rotation: 0,
+          start: { x: 10, y: 120 },
+          end: { x: 210, y: 122 },
+          color: "#2563eb",
+          strokeWidth: 3,
+          spatialDescription: "test placement",
+        },
+      ],
+    } as const satisfies SceneSnapshot;
+
+    const { markdown } = serializeReview(scene, allAnnotationsPageContext);
+
+    expect(markdown).toContain('### [1] Ellipse: "focus here"');
+    expect(markdown).toContain("### [2] Line");
+  });
+
+  it("omits section headers that would have no entries", () => {
+    const scene = {
+      version: 1,
+      annotations: [
+        {
+          id: "only-drawing",
+          type: "rect",
+          geometry: { x: 10, y: 10, width: 100, height: 60 },
+          z: 1,
+          rotation: 0,
+          stroke: "#2563eb",
+          fill: "transparent",
+          strokeWidth: 2,
+          spatialDescription: "test placement",
+        },
+      ],
+    } as const satisfies SceneSnapshot;
+
+    const { markdown } = serializeReview(scene, allAnnotationsPageContext);
+
+    expect(markdown).toContain("- Annotations: 0 element comments, 1 drawing");
+    expect(markdown).not.toContain("## Element comments");
+    expect(markdown).toContain("## Drawings");
+  });
+
   it("omits unavailable component and source metadata instead of guessing", () => {
     const { markdown } = serializeReview(
       allAnnotationsScene,

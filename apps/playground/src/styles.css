@@ -504,3 +504,32 @@ button[type="submit"] {
   font: inherit;
   font-weight: 600;
 }
+
+/* Logo archetypes: a served bitmap, an inline SVG whose fill comes from CSS
+   (icon-set pattern), and a CSS background-image. All three must survive
+   PNG capture. */
+.brand-assets {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 24px 32px;
+}
+
+.brand-assets h2 {
+  margin: 0;
+  font-size: 13px;
+  color: #5c6672;
+}
+
+.svg-logo-shape {
+  fill: #1e46d7;
+}
+
+.background-badge {
+  display: inline-block;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-image: url("/badge-dot.png");
+  background-size: cover;
+}

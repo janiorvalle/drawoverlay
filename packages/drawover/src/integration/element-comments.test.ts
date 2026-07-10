@@ -24,7 +24,7 @@ describe("element comment integration", () => {
     const host = document.getElementById(DRAWOVER_HOST_ID);
     const shadow = host?.shadowRoot;
     const target = document.getElementById("target");
-    if (!host || !shadow) throw new Error("Drawover shell was not mounted.");
+    if (!host || !shadow) throw new Error("drawover shell was not mounted.");
     target?.focus();
 
     host.dispatchEvent(

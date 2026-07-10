@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Toggle Drawover" }).click();
+  await page.getByRole("button", { name: "Toggle drawover" }).click();
 });
 
 test("targets the complete selector and framework fixture matrix", async ({
@@ -81,10 +81,10 @@ test("selects in scrolled containers and consumes reviewing clicks", async ({
   await expect(passThrough).toContainText("Host click count: 0");
   await cancelComment(page);
 
-  // With Drawover closed, the page behaves normally again (the fixture
+  // With drawover closed, the page behaves normally again (the fixture
   // counts the pointerdown, the focus, and the click).
   const host = page.locator("#drawover-root");
-  await host.getByRole("button", { name: "Close Drawover" }).click();
+  await host.getByRole("button", { name: "Close drawover" }).click();
   await passThrough.click();
   await expect(passThrough).toContainText("Host click count: 3");
 });
@@ -96,7 +96,7 @@ test("clears hover visuals when the shell closes", async ({ page }) => {
   await page.locator("#fixture-id").hover();
   await expect(highlight).toBeVisible();
 
-  await page.getByRole("button", { name: "Close Drawover" }).click();
+  await page.getByRole("button", { name: "Close drawover" }).click();
   await expect(highlight).toHaveCount(0);
 });
 

@@ -34,7 +34,7 @@ export function createElementCommentsController(
   const scene = shadow?.querySelector<SVGSVGElement>('[data-layer="scene"]');
   const trigger = shadow?.querySelector<HTMLElement>(".trigger");
   if (!shadow || !root || !scene || !trigger) {
-    throw new Error("Drawover element comments could not attach to the shell.");
+    throw new Error("drawover element comments could not attach to the shell.");
   }
 
   const style = document.createElement("style");

@@ -12,7 +12,7 @@ const root = fileURLToPath(new URL("../", import.meta.url));
 const runtimeMarkers = [
   "DRAWOVER_RUNTIME_SENTINEL_V1",
   "drawover-root",
-  "Toggle Drawover",
+  "Toggle drawover",
   "--dv-bg",
 ];
 
@@ -25,7 +25,7 @@ await buildDisabledFixtures();
 for (const [name, output] of Object.entries(disabledOutputs)) {
   const byteCount = await assertRuntimeAbsent(name, output);
   console.log(
-    `${name} disabled production output: ${byteCount} total bytes, 0 Drawover runtime marker bytes.`,
+    `${name} disabled production output: ${byteCount} total bytes, 0 drawover runtime marker bytes.`,
   );
 }
 
@@ -38,11 +38,11 @@ async function assertMarkersPresent(name, directory) {
 
   if (missing.length > 0) {
     throw new Error(
-      `${name} preview opt-in output is missing Drawover markers: ${missing.join(", ")}`,
+      `${name} preview opt-in output is missing drawover markers: ${missing.join(", ")}`,
     );
   }
 
-  console.log(`${name} preview opt-in output contains Drawover runtime bytes.`);
+  console.log(`${name} preview opt-in output contains drawover runtime bytes.`);
 }
 
 async function assertRuntimeAbsent(name, directory) {

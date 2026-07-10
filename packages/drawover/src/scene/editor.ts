@@ -28,7 +28,8 @@ import { sceneStyles } from "./styles.js";
 import { applyIcon } from "../theme/icons.js";
 import { ANNOTATION_COLORS } from "../theme/tokens.js";
 
-export type SceneTool = "arrow" | "image" | "rect" | "select" | "text";
+export type SceneTool =
+  "arrow" | "ellipse" | "image" | "line" | "rect" | "select" | "text";
 
 interface SceneEditorOptions {
   host: HTMLElement;
@@ -319,7 +320,9 @@ export class SceneEditor {
     const definitions: readonly [SceneTool, string, string, string][] = [
       ["select", "select", "Select and move annotations", "Select"],
       ["rect", "rect", "Draw rectangle", "Rectangle"],
+      ["ellipse", "ellipse", "Draw ellipse", "Ellipse"],
       ["arrow", "arrow", "Draw arrow", "Arrow"],
+      ["line", "line", "Draw line", "Line"],
       ["text", "text", "Insert text", "Text"],
       ["image", "image", "Insert image from file", "Image"],
     ];
@@ -489,11 +492,16 @@ export class SceneEditor {
       return;
     }
 
-    if (this.#tool === "rect" || this.#tool === "arrow") {
+    if (
+      this.#tool === "rect" ||
+      this.#tool === "ellipse" ||
+      this.#tool === "arrow" ||
+      this.#tool === "line"
+    ) {
       const preview =
-        this.#tool === "rect"
-          ? this.#newRect(point, point)
-          : this.#newArrow(point, point);
+        this.#tool === "rect" || this.#tool === "ellipse"
+          ? this.#newRect(point, point, this.#tool)
+          : this.#newArrow(point, point, this.#tool);
       this.#session = {
         kind: "draw",
         pointerId: event.pointerId,
@@ -628,8 +636,18 @@ export class SceneEditor {
       case "draw":
         session.preview =
           session.preview.type === "rect"
-            ? this.#newRect(session.start, point, session.preview.id)
-            : this.#newArrow(session.start, point, session.preview.id);
+            ? this.#newRect(
+                session.start,
+                point,
+                session.preview.shape === "ellipse" ? "ellipse" : "rect",
+                session.preview.id,
+              )
+            : this.#newArrow(
+                session.start,
+                point,
+                session.preview.variant === "line" ? "line" : "arrow",
+                session.preview.id,
+              );
         break;
       case "marquee":
         session.current = normalizeRect(session.start, point);
@@ -1112,11 +1130,13 @@ export class SceneEditor {
   #newRect(
     start: DocumentPoint,
     end: DocumentPoint,
+    tool: "ellipse" | "rect" = "rect",
     id = createAnnotationId(),
   ): RectAnnotation {
     return {
       id,
       type: "rect",
+      ...(tool === "ellipse" ? { shape: "ellipse" as const } : {}),
       geometry: normalizeRect(start, end),
       z: nextZ(this.#store.getSnapshot()),
       rotation: 0,
@@ -1129,11 +1149,13 @@ export class SceneEditor {
   #newArrow(
     start: DocumentPoint,
     end: DocumentPoint,
+    tool: "arrow" | "line" = "arrow",
     id = createAnnotationId(),
   ): ArrowAnnotation {
     return {
       id,
       type: "arrow",
+      ...(tool === "line" ? { variant: "line" as const } : {}),
       geometry: arrowGeometry(start, end),
       z: nextZ(this.#store.getSnapshot()),
       rotation: 0,

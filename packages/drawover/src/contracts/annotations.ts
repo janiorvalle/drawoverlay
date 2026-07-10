@@ -65,9 +65,11 @@ export interface ElementRef {
   component?: ComponentRef;
 }
 
-/** A proposed rectangle drawing. */
+/** A proposed box drawing: a rectangle by default, or an ellipse. */
 export interface RectAnnotation extends AnnotationBase {
   type: "rect";
+  /** Outline drawn within the geometry box. Defaults to "rectangle". */
+  shape?: "rectangle" | "ellipse";
   stroke: string;
   fill: string;
   strokeWidth: number;
@@ -76,9 +78,11 @@ export interface RectAnnotation extends AnnotationBase {
   spatialDescription?: string;
 }
 
-/** A proposed straight arrow with document-coordinate endpoints. */
+/** A proposed straight connector with document-coordinate endpoints. */
 export interface ArrowAnnotation extends AnnotationBase {
   type: "arrow";
+  /** "arrow" draws a head at the end point; "line" is headless. */
+  variant?: "arrow" | "line";
   start: DocumentPoint;
   end: DocumentPoint;
   color: string;

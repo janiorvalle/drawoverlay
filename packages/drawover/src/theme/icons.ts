@@ -12,7 +12,9 @@ const ICON_PATHS: Record<string, string> = {
   pen: `<path d="M3 13l1-3.5 6.5-6.5a1.4 1.4 0 012 2L6 11.5 3 13z" ${STROKE}/>`,
   select: `<path d="M3 2l10 4.5-4.2 1.6L7.2 12.5z" ${STROKE}/>`,
   rect: `<rect x="2.5" y="3.5" width="11" height="9" rx="1" ${STROKE}/>`,
+  ellipse: `<circle cx="8" cy="8" r="5.5" ${STROKE}/>`,
   arrow: `<path d="M3 13L13 3m0 0H7m6 0v6" ${STROKE}/>`,
+  line: `<path d="M3 13L13 3" ${STROKE}/>`,
   text: `<path d="M3 4h10M8 4v9" ${STROKE}/>`,
   image: `<rect x="2.5" y="3" width="11" height="10" rx="1" ${STROKE}/><circle cx="6" cy="6.5" r="1" fill="currentColor"/><path d="M4 11.5l3-3 2 2 2.5-2.5 2 2" fill="none" stroke="currentColor" stroke-width="1.3"/>`,
   undo: `<path d="M4 6h6a3.5 3.5 0 010 7H6M4 6l2.5-2.5M4 6l2.5 2.5" ${STROKE}/>`,
@@ -36,12 +38,16 @@ export function icon(name: string): SVGSVGElement {
   return svgElement("0 0 16 16", paths);
 }
 
-/** The "stroke over frame" logo mark (PLAN.md Phase 2.5, candidate #1). */
+/**
+ * The "nib in frame" logo mark: a solid pen inside a viewport frame —
+ * drawing over the page. Replaced the stroke-over-frame mark, whose thin
+ * squiggle collapsed into a "disabled" slash at trigger size.
+ */
 export function logoMark(): SVGSVGElement {
   return svgElement(
     "0 0 24 24",
-    `<rect x="3" y="5" width="18" height="14" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/>
-     <path d="M2 16C7 10 10 15 13 11s5-4 9-7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>`,
+    `<rect x="3" y="3" width="18" height="18" rx="4" fill="none" stroke="currentColor" stroke-width="2"/>
+     <path d="M8.2 16.2l1-3.4 5.5-5.5a1.7 1.7 0 012.4 2.4l-5.5 5.5-3.4 1z" fill="currentColor"/>`,
   );
 }
 

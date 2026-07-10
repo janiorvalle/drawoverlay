@@ -6,7 +6,7 @@ for (const preview of [
   { name: "Vite", url: "http://127.0.0.1:43174/?fixture=normal" },
   { name: "Next.js", url: "http://127.0.0.1:43175/" },
 ]) {
-  test(`${preview.name} preview opt-in build mounts Drawover`, async ({
+  test(`${preview.name} preview opt-in build mounts drawover`, async ({
     page,
   }) => {
     await page.goto(preview.url);

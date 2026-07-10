@@ -17,7 +17,7 @@ export function createElementTargetingController(
   );
   const root = shadow?.querySelector<HTMLElement>(".root");
   if (!shadow || !layer || !root) {
-    throw new Error("Drawover element-select layer was not found.");
+    throw new Error("drawover element-select layer was not found.");
   }
 
   const highlight = document.createElement("div");

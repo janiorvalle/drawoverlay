@@ -63,18 +63,24 @@ function serializeMarkdown(
     `- Viewport: ${formatNumber(page.viewport.width)}×${formatNumber(page.viewport.height)} @${formatNumber(page.viewport.devicePixelRatio)}x`,
     `- Captured: ${oneLine(page.capturedAt)}`,
     `- Annotations: ${countLabel(elementPins.length, "element comment")}, ${countLabel(drawings.length, "drawing")}`,
-    "",
-    "## Element comments",
   ];
 
-  for (const item of elementPins) {
-    const pin = item.annotation as ElementPinAnnotation;
-    lines.push("", ...formatElementPin(pin, item.number));
+  if (elementPins.length > 0) {
+    lines.push("", "## Element comments");
+    for (const item of elementPins) {
+      const pin = item.annotation as ElementPinAnnotation;
+      lines.push("", ...formatElementPin(pin, item.number));
+    }
   }
 
-  lines.push("", "## Drawings (proposed UI — these elements do NOT exist yet)");
-  for (const item of drawings) {
-    lines.push("", ...formatDrawing(item.annotation, item.number, drawings));
+  if (drawings.length > 0) {
+    lines.push(
+      "",
+      "## Drawings (proposed UI — these elements do NOT exist yet)",
+    );
+    for (const item of drawings) {
+      lines.push("", ...formatDrawing(item.annotation, item.number, drawings));
+    }
   }
 
   return lines.join("\n");
@@ -131,7 +137,8 @@ function formatRectangle(
   siblings: readonly NumberedAnnotation[],
 ): string[] {
   const label = annotation.label ? `: "${quoted(annotation.label)}"` : "";
-  const lines = [`### [${formatNumber(number)}] Rectangle${label}`];
+  const title = annotation.shape === "ellipse" ? "Ellipse" : "Rectangle";
+  const lines = [`### [${formatNumber(number)}] ${title}${label}`];
   appendSpatialThenCoordinates(
     lines,
     annotation,
@@ -151,7 +158,9 @@ function formatArrow(
   number: number,
   siblings: readonly NumberedAnnotation[],
 ): string[] {
-  const lines = [`### [${formatNumber(number)}] Arrow`];
+  const lines = [
+    `### [${formatNumber(number)}] ${annotation.variant === "line" ? "Line" : "Arrow"}`,
+  ];
   const spatial = spatialNarration(annotation, number, siblings);
   if (spatial) {
     lines.push(`- ${oneLine(spatial)}`);

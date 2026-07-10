@@ -104,8 +104,8 @@ button:focus-visible {
 
 button svg {
   display: block;
-  width: 15px;
-  height: 15px;
+  width: 16px;
+  height: 16px;
 }
 
 /* ── surfaces ─────────────────────────────────────── */
@@ -123,16 +123,16 @@ button svg {
 .trigger {
   display: grid;
   place-items: center;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   color: var(--dv-accent);
   transition: transform var(--dv-motion), color var(--dv-motion-fast);
 }
 
 .trigger svg {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
 }
 
 .trigger:hover {
@@ -143,11 +143,11 @@ button svg {
 .toolbar {
   position: relative;
   display: flex;
-  min-height: 40px;
-  max-width: min(560px, calc(100vw - 72px));
+  min-height: 44px;
+  max-width: min(620px, calc(100vw - 72px));
   align-items: center;
-  gap: 3px;
-  padding: 5px 7px;
+  gap: 4px;
+  padding: 6px 9px;
 }
 
 .brand {
@@ -174,7 +174,7 @@ button svg {
 
 .modes button {
   display: flex;
-  height: 26px;
+  height: 28px;
   align-items: center;
   gap: 5px;
   padding: 0 10px;
@@ -201,8 +201,8 @@ button svg {
 .close {
   position: relative;
   display: grid;
-  width: 28px;
-  height: 28px;
+  width: 31px;
+  height: 31px;
   padding: 0;
   place-items: center;
   color: var(--dv-muted);
@@ -240,7 +240,7 @@ button svg {
   align-items: center;
   gap: 7px;
   max-width: 420px;
-  padding: 3px 4px 3px 8px;
+  padding: 3px 8px;
   border: 1px solid var(--dv-border);
   border-radius: 6px;
   background: var(--dv-surface-raised);
@@ -256,44 +256,15 @@ button svg {
   white-space: nowrap;
 }
 
-.command-bar:has(.flavor-chips[hidden]) {
-  padding-right: 8px;
-}
-
 .root[data-position='top-right'] .command-bar,
 .root[data-position='top-left'] .command-bar {
   top: calc(100% + 8px);
   bottom: auto;
 }
 
-.flavor-chips {
-  display: flex;
-  gap: 3px;
-}
-
-.flavor-chips[hidden] {
-  display: none;
-}
-
-.flavor-chip {
-  position: relative;
-  height: 22px;
-  padding: 0 8px;
-  border: 1px solid var(--dv-border);
-  border-radius: 5px;
-  color: var(--dv-muted);
-  font-family: var(--dv-font-mono);
-  font-size: 10px;
-}
-
-.flavor-chip:hover {
-  background: var(--dv-accent-soft);
-  color: var(--dv-text);
-}
-
 .separator {
   width: 1px;
-  height: 18px;
+  height: 20px;
   flex: 0 0 auto;
   background: var(--dv-border);
   margin: 0 3px;
