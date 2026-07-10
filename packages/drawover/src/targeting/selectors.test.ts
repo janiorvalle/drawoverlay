@@ -57,14 +57,14 @@ describe("selector engine", () => {
   });
 
   it("escapes identifiers and attribute values before checking uniqueness", () => {
-    document.body.innerHTML = `<button data-testid='save"draft' id="123:save">Save</button>`;
+    document.body.innerHTML = `<button data-testid='save"draft' id="123save">Save</button>`;
     const element = document.querySelector("button");
     if (!element) throw new Error("fixture missing");
 
     const selector = createSelectorChain(element);
 
     expect(selector.primary).toBe('[data-testid="save\\"draft"]');
-    expect(selector.fallbacks).toContain("#\\31 23\\:save");
+    expect(selector.fallbacks).toContain("#\\31 23save");
   });
 
   it("excludes high-entropy and CSS-module class names from stable paths", () => {

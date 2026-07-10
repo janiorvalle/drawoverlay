@@ -11,6 +11,7 @@ import type {
   TextAnnotation,
 } from "../contracts/index.js";
 import { viewportRectToDocument } from "../coordinates.js";
+import { isGeneratedId } from "../targeting/selectors.js";
 
 const DRAWING_TYPES = new Set<Annotation["type"]>([
   "rect",
@@ -240,29 +241,39 @@ function spatialNarration(
   );
 }
 
-/** Relate a drawing to another drawing whose bounds contain its center. */
+/** Relate a drawing to a sibling drawing it mostly sits within. */
 function drawingRelation(
   annotation:
     RectAnnotation | ArrowAnnotation | TextAnnotation | ImageAnnotation,
   number: number,
   siblings: readonly NumberedAnnotation[],
 ): string | undefined {
-  const center = {
-    x: annotation.geometry.x + annotation.geometry.width / 2,
-    y: annotation.geometry.y + annotation.geometry.height / 2,
-  };
+  const self = annotation.geometry;
+  const selfArea = Math.max(self.width, 1) * Math.max(self.height, 1);
   for (const sibling of siblings) {
     if (sibling.number === number) continue;
     const other = sibling.annotation;
     if (other.type !== "rect" && other.type !== "image") continue;
     const bounds = other.geometry;
-    if (
-      center.x >= bounds.x &&
-      center.x <= bounds.x + bounds.width &&
-      center.y >= bounds.y &&
-      center.y <= bounds.y + bounds.height
-    ) {
+    const overlapWidth = Math.max(
+      0,
+      Math.min(self.x + self.width, bounds.x + bounds.width) -
+        Math.max(self.x, bounds.x),
+    );
+    const overlapHeight = Math.max(
+      0,
+      Math.min(self.y + self.height, bounds.y + bounds.height) -
+        Math.max(self.y, bounds.y),
+    );
+    const ratio =
+      (Math.max(overlapWidth, self.width === 0 ? 1 : 0) *
+        Math.max(overlapHeight, self.height === 0 ? 1 : 0)) /
+      selfArea;
+    if (ratio >= 1) {
       return `Inside drawing [${formatNumber(sibling.number)}]`;
+    }
+    if (ratio >= 0.5) {
+      return `Mostly inside drawing [${formatNumber(sibling.number)}], overflowing it`;
     }
   }
   return undefined;
@@ -287,9 +298,28 @@ function nearestElementRelation(
     | undefined;
   let nearestDistance = Number.POSITIVE_INFINITY;
 
+  const semanticTags = new Set([
+    "main",
+    "nav",
+    "header",
+    "footer",
+    "form",
+    "aside",
+  ]);
   for (const element of candidates) {
     if (element.dataset.drawoverRuntime) continue;
     if (isGenericMount(element)) continue;
+    // An element whose only hook is an auto-generated id would narrate as a
+    // bare tag; it is not a useful reference.
+    if (
+      element.id &&
+      isGeneratedId(element.id) &&
+      !element.dataset.testid &&
+      !element.getAttribute("aria-label")?.trim() &&
+      !semanticTags.has(element.tagName.toLowerCase())
+    ) {
+      continue;
+    }
     const rect = viewportRectToDocument(element.getBoundingClientRect());
     if (rect.width === 0 && rect.height === 0) continue;
     // Page-scale wrappers "overlap" everything and describe nothing.
@@ -315,7 +345,8 @@ function nearestElementRelation(
 function isGenericMount(element: HTMLElement): boolean {
   const tag = element.tagName.toLowerCase();
   if (tag === "html" || tag === "body") return true;
-  return element.id ? GENERIC_MOUNT_IDS.has(element.id.toLowerCase()) : false;
+  if (!element.id) return false;
+  return GENERIC_MOUNT_IDS.has(element.id.toLowerCase());
 }
 
 /** Universal fallback: locate the drawing by page region. Works on any DOM. */
@@ -365,7 +396,11 @@ function formatLiveElement(element: HTMLElement): string {
   const tag = element.tagName.toLowerCase();
   const testId = element.dataset.testid;
   if (testId) return `<${tag} data-testid="${attributeValue(testId)}">`;
-  if (element.id) return `<${tag} id="${attributeValue(element.id)}">`;
+  if (element.id && !isGeneratedId(element.id)) {
+    return `<${tag} id="${attributeValue(element.id)}">`;
+  }
+  const ariaLabel = element.getAttribute("aria-label")?.trim();
+  if (ariaLabel) return `<${tag} aria-label="${attributeValue(ariaLabel)}">`;
   return `<${tag}>`;
 }
 

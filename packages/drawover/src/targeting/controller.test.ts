@@ -16,7 +16,7 @@ afterEach(() => {
 });
 
 describe("element targeting lifecycle", () => {
-  it("highlights and selects the element under the pointer without swallowing clicks", () => {
+  it("highlights and selects the element under the pointer while consuming the click", () => {
     const target = document.querySelector<HTMLButtonElement>("#host-action");
     if (!target) throw new Error("fixture missing");
     target.getBoundingClientRect = () =>
@@ -40,11 +40,18 @@ describe("element targeting lifecycle", () => {
     expect(highlight?.dataset.targetSelector).toBe("#host-action");
     expect(highlight?.style.left).toBe("20px");
 
-    target.dispatchEvent(
-      new MouseEvent("click", { bubbles: true, clientX: 30, clientY: 40 }),
-    );
+    const click = new MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+      clientX: 30,
+      clientY: 40,
+    });
+    target.dispatchEvent(click);
     expect(selected).toHaveBeenCalledOnce();
-    expect(hostClick).toHaveBeenCalledOnce();
+    // Reviewing never operates the page: the host handler must not fire and
+    // default actions (links, submits) are cancelled.
+    expect(hostClick).not.toHaveBeenCalled();
+    expect(click.defaultPrevented).toBe(true);
   });
 
   it("obeys shell mode and removes highlight state when scene mode takes over", () => {
@@ -64,6 +71,9 @@ describe("element targeting lifecycle", () => {
       host?.shadowRoot?.querySelector("[data-targeting-highlight]"),
     ).not.toBeNull();
 
+    // Clicking shell UI resolves to the drawover host in a real browser, so
+    // interception must skip it. Mirror that in the mock before clicking.
+    if (host) vi.spyOn(document, "elementFromPoint").mockReturnValue(host);
     host?.shadowRoot
       ?.querySelector<HTMLButtonElement>('button[data-mode="scene"]')
       ?.click();

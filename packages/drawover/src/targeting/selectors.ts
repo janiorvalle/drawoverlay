@@ -2,6 +2,17 @@ import type { SelectorChain } from "../contracts/index.js";
 
 const GENERATED_CLASS_SHAPE = /^[a-z]+-?[A-Za-z0-9]{5,}$/;
 const HEX_DIGEST = /^[a-f\d]{6,}$/i;
+const GENERATED_ID_SHAPE =
+  /^(?:radix-|headlessui-|react-aria|aria-|mui-|mantine-)|[«»:]|^_?r_?[a-z0-9]{1,4}_?$/i;
+
+/**
+ * Auto-generated ids (React useId "«r1»"/":r1:", Radix "radix-_r_1t_-…",
+ * Headless UI, MUI) are unique but unstable across renders and sessions, so
+ * they must never anchor selectors or spatial narration.
+ */
+export function isGeneratedId(id: string): boolean {
+  return GENERATED_ID_SHAPE.test(id.trim());
+}
 
 export function createSelectorChain(element: Element): SelectorChain {
   const root = element.ownerDocument;
@@ -12,7 +23,11 @@ export function createSelectorChain(element: Element): SelectorChain {
     addCandidate(candidates, `[data-testid="${escapeAttributeValue(testId)}"]`);
   }
 
-  if (element.id && isUniqueAttributeMatch("id", element.id, element, root)) {
+  if (
+    element.id &&
+    !isGeneratedId(element.id) &&
+    isUniqueAttributeMatch("id", element.id, element, root)
+  ) {
     addCandidate(candidates, `#${escapeIdentifier(element.id)}`);
   }
 
@@ -138,7 +153,11 @@ function uniqueAnchor(element: Element, root: Document): string | undefined {
   if (testId && isUniqueAttributeMatch("data-testid", testId, element, root)) {
     return `[data-testid="${escapeAttributeValue(testId)}"]`;
   }
-  if (element.id && isUniqueAttributeMatch("id", element.id, element, root)) {
+  if (
+    element.id &&
+    !isGeneratedId(element.id) &&
+    isUniqueAttributeMatch("id", element.id, element, root)
+  ) {
     return `#${escapeIdentifier(element.id)}`;
   }
   return undefined;

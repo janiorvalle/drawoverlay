@@ -58,7 +58,7 @@ test("highlights nested and overlapping hit-test targets", async ({ page }) => {
   );
 });
 
-test("selects in scrolled containers and preserves host pointer behavior", async ({
+test("selects in scrolled containers and consumes reviewing clicks", async ({
   page,
 }) => {
   const scroller = page.locator(".scroll-fixture");
@@ -71,7 +71,19 @@ test("selects in scrolled containers and preserves host pointer behavior", async
   );
   await cancelComment(page);
 
+  // Reviewing must never operate the page: the click selects the button
+  // for commenting but its own handler (and any navigation) never fires.
   const passThrough = page.locator("#pass-through");
+  await passThrough.click();
+  await expect(page.locator("#targeting-output")).toContainText(
+    "#pass-through | button",
+  );
+  await expect(passThrough).toContainText("Host click count: 0");
+  await cancelComment(page);
+
+  // With Drawover closed, the page behaves normally again.
+  const host = page.locator("#drawover-root");
+  await host.getByRole("button", { name: "Close Drawover" }).click();
   await passThrough.click();
   await expect(passThrough).toContainText("Host click count: 1");
 });

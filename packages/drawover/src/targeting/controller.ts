@@ -93,6 +93,10 @@ export function createElementTargetingController(
     }
     const target = targetAt(event.clientX, event.clientY);
     if (!target) return;
+    // Reviewing must never operate the page: a click that picks an element
+    // is consumed before host links, buttons, or framework handlers see it.
+    event.preventDefault();
+    event.stopPropagation();
     const detail: ElementRef = captureElementRef(target);
     host.dispatchEvent(
       new CustomEvent<ElementRef>(ELEMENT_SELECTED_EVENT, { detail }),
