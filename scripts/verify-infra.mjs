@@ -200,8 +200,15 @@ const allowedMarkdown = new Set([
   "packages/drawover/README.md",
 ]);
 
+const isChangesetEntry = (path) =>
+  /^\.changeset\/[A-Za-z0-9-]+\.md$/.test(path);
+
 for (const path of publicFiles) {
-  if (extname(path).toLowerCase() === ".md" && !allowedMarkdown.has(path)) {
+  if (
+    extname(path).toLowerCase() === ".md" &&
+    !allowedMarkdown.has(path) &&
+    !isChangesetEntry(path)
+  ) {
     violations.push(`D10 disallows committed markdown: ${path}`);
   }
   if (isForbiddenPublicPath(path)) {
