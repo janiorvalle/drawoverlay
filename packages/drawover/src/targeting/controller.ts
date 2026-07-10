@@ -152,16 +152,19 @@ export function createElementTargetingController(
     renderHighlight(target);
   };
 
-  // Frameworks act on pointerdown/mouseup as often as on click (Radix tabs
-  // activate on pointerdown), so reviewing must silence the whole trusted
-  // pointer sequence over page elements. preventDefault is deliberately NOT
-  // called for the interim events: cancelling pointerdown would suppress the
-  // browser's synthesized click and break selection itself.
+  // Frameworks act on pointerdown/mouseup/focus as often as on click (Radix
+  // tabs activate on pointerdown or on focus in automatic mode), so reviewing
+  // must silence the whole trusted pointer sequence over page elements.
+  // mousedown additionally cancels its default action, which is what moves
+  // focus — without that, focus-activated components still fire. pointerdown
+  // must NOT be cancelled: that would suppress the browser's synthesized
+  // click and break selection itself.
   const onPointerSequence = (event: Event): void => {
     if (!event.isTrusted || !isActive()) return;
     const pointer = event as MouseEvent;
     if (!targetAt(pointer.clientX, pointer.clientY)) return;
     event.stopPropagation();
+    if (event.type === "mousedown") event.preventDefault();
   };
 
   const onClick = (event: MouseEvent): void => {

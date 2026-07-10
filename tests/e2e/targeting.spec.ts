@@ -82,11 +82,11 @@ test("selects in scrolled containers and consumes reviewing clicks", async ({
   await cancelComment(page);
 
   // With Drawover closed, the page behaves normally again (the fixture
-  // counts both the pointerdown and the click).
+  // counts the pointerdown, the focus, and the click).
   const host = page.locator("#drawover-root");
   await host.getByRole("button", { name: "Close Drawover" }).click();
   await passThrough.click();
-  await expect(passThrough).toContainText("Host click count: 2");
+  await expect(passThrough).toContainText("Host click count: 3");
 });
 
 test("clears hover visuals when the shell closes", async ({ page }) => {

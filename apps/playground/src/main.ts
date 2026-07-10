@@ -178,9 +178,10 @@ if (vueFixture) {
   });
 }
 
-// Radix-style components activate on pointerdown, not click; the fixture
-// counts both so tests can prove neither reaches the host while reviewing.
-for (const type of ["click", "pointerdown"]) {
+// Radix-style components activate on pointerdown, focus, or click; the
+// fixture counts all three so tests can prove none reach the host while
+// reviewing.
+for (const type of ["click", "pointerdown", "focus"]) {
   document.querySelector("#pass-through")?.addEventListener(type, (event) => {
     const count = (event.currentTarget as HTMLElement).querySelector("span");
     if (count) count.textContent = String(Number(count.textContent) + 1);
