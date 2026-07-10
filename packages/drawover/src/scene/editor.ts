@@ -51,6 +51,7 @@ interface MarqueeSession {
   start: DocumentPoint;
   current: DocumentRect;
   additive: boolean;
+  hadSelection: boolean;
 }
 
 interface MoveSession {
@@ -441,6 +442,14 @@ export class SceneEditor {
     }
   }
 
+  #ensureElementSelectMode(): void {
+    if (this.#host.dataset.drawoverMode !== "element-select") {
+      this.#shadow
+        .querySelector<HTMLButtonElement>('button[data-mode="element-select"]')
+        ?.click();
+    }
+  }
+
   #isSceneActive(): boolean {
     const toolbar = this.#shadow.querySelector<HTMLElement>(".toolbar");
     return (
@@ -547,6 +556,7 @@ export class SceneEditor {
       return;
     }
 
+    const hadSelection = this.#selectedIds.size > 0;
     if (!event.shiftKey) this.#selectedIds.clear();
     this.#session = {
       kind: "marquee",
@@ -554,6 +564,7 @@ export class SceneEditor {
       start: point,
       current: { ...point, width: 0, height: 0 },
       additive: event.shiftKey,
+      hadSelection,
     };
     this.#capture(event.pointerId);
     this.#render();
@@ -686,6 +697,17 @@ export class SceneEditor {
           .map(({ id }) => id);
         if (!session.additive) this.#selectedIds.clear();
         for (const id of selected) this.#selectedIds.add(id);
+        // A plain click on empty canvas with nothing selected means the user
+        // wants the page back: return pointer control to element targeting.
+        if (
+          selected.length === 0 &&
+          !session.additive &&
+          !session.hadSelection &&
+          session.current.width < 3 &&
+          session.current.height < 3
+        ) {
+          this.#ensureElementSelectMode();
+        }
         break;
       }
       case "move": {

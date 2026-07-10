@@ -233,6 +233,47 @@ test("inserts images from a file and clipboard paste", async ({ page }) => {
   await expect(images).toHaveCount(2);
 });
 
+test("plain click on empty canvas returns pointer control to Comment mode", async ({
+  page,
+}) => {
+  const host = page.locator("#drawover-root");
+  const scene = host.locator('[data-layer="scene"]');
+  const commentMode = host.getByRole("button", {
+    name: "Comment on host page elements",
+  });
+
+  await tool(host, "rect").click();
+  await drag(page, { x: 40, y: 90 }, { x: 160, y: 160 });
+  await tool(host, "select").click();
+
+  // Click the rectangle: stays in Draw mode with a selection.
+  await page.mouse.click(100, 125);
+  await expect(host.locator(".scene-status")).toHaveText(
+    "1 items / 1 selected",
+  );
+  await expect(commentMode).toHaveAttribute("aria-pressed", "false");
+
+  // First empty click deselects but keeps Draw mode.
+  await page.mouse.click(300, 520);
+  await expect(host.locator(".scene-status")).toHaveText(
+    "1 items / 0 selected",
+  );
+  await expect(commentMode).toHaveAttribute("aria-pressed", "false");
+
+  // Second empty click (nothing selected) escapes to Comment mode and the
+  // scene layer stops swallowing host-page clicks.
+  await page.mouse.click(300, 520);
+  await expect(commentMode).toHaveAttribute("aria-pressed", "true");
+  await expect(scene).toHaveCSS("pointer-events", "none");
+
+  // Shift-click (additive marquee intent) must NOT trigger the escape.
+  await host.getByRole("button", { name: "Use the annotation scene" }).click();
+  await page.keyboard.down("Shift");
+  await page.mouse.click(300, 520);
+  await page.keyboard.up("Shift");
+  await expect(commentMode).toHaveAttribute("aria-pressed", "false");
+});
+
 function tool(host: Locator, name: string): Locator {
   return host.locator(`button[data-tool="${name}"]`);
 }

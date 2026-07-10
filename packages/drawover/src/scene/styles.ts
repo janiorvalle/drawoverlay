@@ -99,9 +99,17 @@ export const sceneStyles = `
   color: var(--dv-text);
 }
 
-.scene-tools button[aria-pressed='true'] {
+.root[data-mode='scene'] .scene-tools button[aria-pressed='true'] {
   background: var(--dv-accent-soft);
   color: var(--dv-selected-text);
+}
+
+/* Scene tools are reachable but visibly inactive while Comment mode owns
+   pointer input; clicking any of them switches to Draw. Text-bearing controls
+   (the Fill toggle) keep full opacity so text contrast stays WCAG-compliant. */
+.root[data-mode='element-select'] .scene-tools,
+.root[data-mode='element-select'] .palette button:not([data-fill-toggle]) {
+  opacity: 0.45;
 }
 
 .history-tools button:disabled,
