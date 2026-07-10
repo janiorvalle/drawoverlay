@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type {
   ArrowAnnotation,
   DocumentPoint,
+  ElementPinAnnotation,
   RectAnnotation,
   TextAnnotation,
 } from "../contracts/index.js";
@@ -48,6 +49,35 @@ describe("scene model operations", () => {
     expect(updateArrowEndpoint(moved, "end", { x: 40, y: 80 })).toMatchObject({
       geometry: { x: 15, y: 10, width: 25, height: 70 },
       end: { x: 40, y: 80 },
+    });
+  });
+
+  it("moves an element pin's stored offset with its geometry", () => {
+    const pin: ElementPinAnnotation = {
+      id: "pin",
+      type: "element-pin",
+      geometry: { x: 90, y: 180, width: 26, height: 26 },
+      z: 1,
+      rotation: 0,
+      comment: "Move me",
+      element: {
+        selector: { primary: "#target", fallbacks: [] },
+        facts: {
+          tag: "button",
+          attributes: {},
+          bbox: { x: 50, y: 100, width: 100, height: 40 },
+        },
+      },
+      elementOffset: { x: 40, y: 80 },
+    };
+
+    expect(translateAnnotation(pin, { x: 12, y: -8 })).toMatchObject({
+      geometry: { x: 102, y: 172 },
+      elementOffset: { x: 52, y: 72 },
+    });
+    expect(resizeAnnotation(pin, "nw", { x: 70, y: 150 })).toMatchObject({
+      geometry: { x: 70, y: 150 },
+      elementOffset: { x: 20, y: 50 },
     });
   });
 

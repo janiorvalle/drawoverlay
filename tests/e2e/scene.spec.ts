@@ -33,7 +33,9 @@ test("creates and transforms rectangles, arrows, and text", async ({
     beforeLabelX ?? "",
   );
   await label.press("Enter");
-  await expect(rectangle.locator("text")).toHaveText("Header");
+  await expect(
+    rectangle.locator("text:not([data-annotation-badge-label])"),
+  ).toHaveText("Header");
 
   const southeast = scene.locator('[data-handle="se"]');
   const beforeResize = await rectangle.locator("rect").getAttribute("width");

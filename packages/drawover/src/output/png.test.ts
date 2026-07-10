@@ -12,8 +12,13 @@ interface PngHarness {
   page: HTMLElement;
   png: Blob;
   svg: SVGSVGElement;
-  toCanvas: ReturnType<typeof vi.fn>;
+  toCanvas: ReturnType<typeof vi.fn<ScreenshotToCanvas>>;
 }
+
+type ScreenshotToCanvas = (
+  node: HTMLElement,
+  options: Record<string, unknown>,
+) => Promise<HTMLCanvasElement>;
 
 describe("composited PNG output", () => {
   beforeEach(() => {
@@ -184,6 +189,109 @@ describe("composited PNG output", () => {
     expect(options.filter(overlayHost.host)).toBe(false);
     expect(options.filter(document.createElement("main"))).toBe(true);
     expect(options.filter(document.createElement("img"))).toBe(false);
+    expect(
+      (harness.toCanvas.mock.calls[0]?.[1] as { skipFonts?: boolean })
+        .skipFonts,
+    ).toBe(true);
+  });
+
+  it("restricts capture styles and media to local-only resources", async () => {
+    const harness = createHarness();
+    await exportCompositedPng(
+      { annotationSvg: harness.svg, page: harness.page },
+      harness.dependencies,
+    );
+
+    const options = harness.toCanvas.mock.calls[0]?.[1] as {
+      filter: (node: Node) => boolean;
+      includeStyleProperties: string[];
+    };
+    expect(options.includeStyleProperties).toContain("background-color");
+    expect(options.includeStyleProperties).not.toContain("background");
+    expect(options.includeStyleProperties).not.toContain("background-image");
+    expect(options.includeStyleProperties).not.toContain("mask");
+    const remoteImage = document.createElement("img");
+    remoteImage.src = "https://assets.example.com/review.png";
+    const localImage = document.createElement("img");
+    localImage.src = "data:image/png;base64,AA==";
+    const responsiveImage = document.createElement("img");
+    responsiveImage.src = "data:image/png;base64,AA==";
+    responsiveImage.srcset = "https://assets.example.com/review-2x.png 2x";
+    const remoteStyle = document.createElement("div");
+    remoteStyle.style.backgroundImage =
+      'url("https://assets.example.com/review-background.png")';
+    const remoteSvg = document.createElementNS(
+      "http://www.w3.org/2000/svg",
+      "svg",
+    );
+    const remoteSvgImage = document.createElementNS(
+      "http://www.w3.org/2000/svg",
+      "image",
+    );
+    remoteSvgImage.setAttribute(
+      "href",
+      "https://assets.example.com/review.svg",
+    );
+    remoteSvg.append(remoteSvgImage);
+    const localSvg = document.createElementNS(
+      "http://www.w3.org/2000/svg",
+      "svg",
+    );
+    localSvg.append(
+      document.createElementNS("http://www.w3.org/2000/svg", "circle"),
+    );
+    const remoteVideo = document.createElement("video");
+    Object.defineProperty(remoteVideo, "currentSrc", {
+      value: "https://assets.example.com/review.mp4",
+    });
+    expect(options.filter(remoteImage)).toBe(false);
+    expect(options.filter(localImage)).toBe(true);
+    expect(options.filter(responsiveImage)).toBe(false);
+    expect(options.filter(remoteStyle)).toBe(false);
+    expect(options.filter(remoteSvg)).toBe(false);
+    expect(options.filter(localSvg)).toBe(false);
+    expect(options.filter(remoteVideo)).toBe(false);
+    expect(options.filter(document.createElement("style"))).toBe(false);
+  });
+
+  it("sanitizes a resource-bearing capture root before loading the dependency", async () => {
+    const harness = createHarness();
+    const page = document.createElement("main");
+    page.style.backgroundImage =
+      'url("https://assets.example.com/review-background.png")';
+    const escapedStyle = document.createElement("div");
+    escapedStyle.dataset.escapedStyle = "true";
+    escapedStyle.setAttribute(
+      "style",
+      'background-image: \\75 rl("https://assets.example.com/escaped.png")',
+    );
+    const customElement = document.createElement("capture-probe");
+    customElement.textContent = "Inert custom element";
+    const legacyBackground = document.createElement("table");
+    legacyBackground.setAttribute(
+      "background",
+      "/private/review-background.png",
+    );
+    page.append(escapedStyle, customElement, legacyBackground);
+
+    await exportCompositedPng(
+      { annotationSvg: harness.svg, page },
+      harness.dependencies,
+    );
+
+    const capturePage = harness.toCanvas.mock.calls[0]?.[0];
+    expect(capturePage).not.toBe(page);
+    expect(capturePage?.style.backgroundImage).toBe("");
+    expect(
+      capturePage?.querySelector<HTMLElement>("[data-escaped-style]")?.style
+        .backgroundImage,
+    ).toBe("");
+    expect(capturePage?.querySelector("capture-probe")).toBeNull();
+    expect(capturePage?.textContent).toContain("Inert custom element");
+    expect(
+      capturePage?.querySelector("table")?.hasAttribute("background"),
+    ).toBe(false);
+    expect(harness.loadScreenshotLibrary).toHaveBeenCalledOnce();
   });
 
   it.each([
@@ -226,24 +334,25 @@ describe("composited PNG output", () => {
 });
 
 function createHarness(inShadowRoot = false): PngHarness {
-  const page = {
-    clientHeight: 100,
-    clientWidth: 200,
-    getBoundingClientRect: () =>
-      ({
-        bottom: 100,
-        height: 100,
-        left: 0,
-        right: 200,
-        top: 0,
-        width: 200,
-        x: 0,
-        y: 0,
-        toJSON: () => ({}),
-      }) satisfies DOMRect,
-    scrollHeight: 100,
-    scrollWidth: 200,
-  } as HTMLElement;
+  const page = document.createElement("main");
+  Object.defineProperties(page, {
+    clientHeight: { configurable: true, value: 100 },
+    clientWidth: { configurable: true, value: 200 },
+    scrollHeight: { configurable: true, value: 100 },
+    scrollWidth: { configurable: true, value: 200 },
+  });
+  page.getBoundingClientRect = () =>
+    ({
+      bottom: 100,
+      height: 100,
+      left: 0,
+      right: 200,
+      top: 0,
+      width: 200,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    }) satisfies DOMRect;
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   svg.getBoundingClientRect = () =>
     ({
@@ -270,7 +379,7 @@ function createHarness(inShadowRoot = false): PngHarness {
     width: 400,
   } as unknown as HTMLCanvasElement;
   const png = new Blob(["png"], { type: "image/png" });
-  const toCanvas = vi.fn().mockResolvedValue(canvas);
+  const toCanvas = vi.fn<ScreenshotToCanvas>().mockResolvedValue(canvas);
   const loadScreenshotLibrary = vi.fn().mockResolvedValue({ toCanvas });
   const loadSvgImage = vi
     .fn<(svg: SVGSVGElement) => Promise<CanvasImageSource>>()

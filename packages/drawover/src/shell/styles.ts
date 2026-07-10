@@ -18,7 +18,7 @@ export const shellStyles = `
   --dv-text: #172033;
   --dv-muted: #5e687b;
   --dv-border: #cfd5df;
-  --dv-accent: #e5484d;
+  --dv-accent: #c7353a;
   --dv-accent-text: #ffffff;
   --dv-selected: #eaf2ff;
   --dv-selected-text: #174ea6;
@@ -190,6 +190,22 @@ button:focus-visible {
 .command {
   height: 30px;
   padding: 0 9px;
+  white-space: nowrap;
+}
+
+.command[data-command='copy-markdown'] {
+  border-color: var(--dv-accent);
+  background: var(--dv-accent);
+  color: var(--dv-accent-text);
+  font-weight: 700;
+}
+
+.command-status {
+  max-width: 150px;
+  overflow: hidden;
+  color: var(--dv-muted);
+  font-size: 11px;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 

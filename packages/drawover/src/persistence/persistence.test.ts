@@ -1,7 +1,11 @@
 import { afterEach, describe, expect, it } from "vitest";
 import type { NoteAnnotation } from "../contracts/index.js";
 import { createSceneStore } from "../scene/store.js";
-import { bindScenePersistence, getDefaultStorageKey } from "./persistence.js";
+import {
+  bindScenePersistence,
+  getDefaultStorageKey,
+  loadPersistedAnnotations,
+} from "./persistence.js";
 
 afterEach(() => localStorage.clear());
 
@@ -22,6 +26,33 @@ describe("scene persistence", () => {
       note("note-1", "Survives reload"),
     ]);
     secondBinding.destroy();
+  });
+
+  it("loads persisted annotations as a non-undoable history baseline", () => {
+    const key = "history-baseline";
+    localStorage.setItem(
+      key,
+      JSON.stringify({
+        version: 1,
+        annotations: [note("note-1", "Restored")],
+      }),
+    );
+    const store = createSceneStore(
+      loadPersistedAnnotations({ storageKey: key }),
+    );
+    const binding = bindScenePersistence(store, {
+      storageKey: key,
+      hydrate: false,
+    });
+
+    expect(store.canUndo()).toBe(false);
+    store.create(note("note-2", "New"));
+    store.undo();
+    expect(store.getSnapshot().annotations).toEqual([
+      note("note-1", "Restored"),
+    ]);
+    expect(store.canUndo()).toBe(false);
+    binding.destroy();
   });
 
   it("isolates default keys by origin and pathname", () => {

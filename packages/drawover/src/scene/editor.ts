@@ -22,6 +22,7 @@ import {
   visualBounds,
   type ZOrderAction,
 } from "./model.js";
+import { resolveElementPinPosition } from "./anchoring.js";
 import { SceneRenderer } from "./renderer.js";
 import { sceneStyles } from "./styles.js";
 
@@ -129,6 +130,14 @@ export class SceneEditor {
     void this.#onPaste(event);
   };
   readonly #onViewportChangeBound = (): void => this.#render();
+  readonly #onAnchorFrameBound = (): void => {
+    this.#anchorFrame = undefined;
+    if (this.#destroyed || this.#toolbar.hidden) return;
+    const snapshot = this.#store.getSnapshot();
+    const signature = anchorSignature(snapshot.annotations);
+    if (signature !== this.#anchorSignature) this.#render();
+    this.#syncAnchorWatch();
+  };
   readonly #onToolbarPointerDownBound = (event: PointerEvent): void => {
     const target = event.target instanceof Element ? event.target : undefined;
     if (target?.closest('button.close, button[aria-label="Clear annotations"]'))
@@ -154,6 +163,8 @@ export class SceneEditor {
   #imageImportGeneration = 0;
   #lastAnnotationClick: { id: string; at: number } | undefined;
   #suppressDoubleClickUntil = 0;
+  #anchorFrame: number | undefined;
+  #anchorSignature = "";
   #destroyed = false;
 
   constructor(options: SceneEditorOptions) {
@@ -208,6 +219,7 @@ export class SceneEditor {
     window.addEventListener("scroll", this.#onViewportChangeBound, {
       passive: true,
     });
+    document.addEventListener("scroll", this.#onViewportChangeBound, true);
     window.addEventListener("resize", this.#onViewportChangeBound);
     this.#toolbar.addEventListener(
       "pointerdown",
@@ -220,15 +232,21 @@ export class SceneEditor {
         this.#cancelInlineEditor?.();
       }
       this.#render();
+      this.#syncAnchorWatch();
     });
     this.#shellVisibilityObserver.observe(this.#sceneLayer, {
       attributeFilter: ["style"],
+      attributes: true,
+    });
+    this.#shellVisibilityObserver.observe(this.#toolbar, {
+      attributeFilter: ["hidden"],
       attributes: true,
     });
     this.#host.addEventListener("drawover:clear-request", this.#onClearBound);
     this.#unsubscribe = this.#store.subscribe(() => {
       this.#pruneSelection();
       this.#render();
+      this.#syncAnchorWatch();
     });
     this.#setTool("select");
     this.#setColor(COLORS[0]);
@@ -242,6 +260,10 @@ export class SceneEditor {
   destroy(): void {
     if (this.#destroyed) return;
     this.#destroyed = true;
+    if (this.#anchorFrame !== undefined) {
+      window.cancelAnimationFrame(this.#anchorFrame);
+      this.#anchorFrame = undefined;
+    }
     this.#invalidateImageImports();
     this.#cancelInlineEditor?.();
     this.#unsubscribe();
@@ -262,6 +284,7 @@ export class SceneEditor {
     document.removeEventListener("keydown", this.#onKeyDownBound);
     document.removeEventListener("paste", this.#onPasteBound);
     window.removeEventListener("scroll", this.#onViewportChangeBound);
+    document.removeEventListener("scroll", this.#onViewportChangeBound, true);
     window.removeEventListener("resize", this.#onViewportChangeBound);
     this.#toolbar.removeEventListener(
       "pointerdown",
@@ -476,7 +499,7 @@ export class SceneEditor {
       const originals = new Map<string, Annotation>();
       let z = nextZ(this.#store.getSnapshot());
       for (const selectedId of this.#selectedIds) {
-        const annotation = this.#store.getById(selectedId);
+        const annotation = this.#resolvedById(selectedId);
         if (!annotation) continue;
         originals.set(
           selectedId,
@@ -635,7 +658,8 @@ export class SceneEditor {
       case "marquee": {
         const selected = this.#store
           .getSnapshot()
-          .annotations.filter(
+          .annotations.map(resolveElementPinPosition)
+          .filter(
             (annotation) =>
               annotation.type !== "note" &&
               intersects(visualBounds(annotation), session.current),
@@ -992,6 +1016,7 @@ export class SceneEditor {
     let z = nextZ(snapshot);
     const duplicates = snapshot.annotations
       .filter(({ id }) => this.#selectedIds.has(id))
+      .map(resolveElementPinPosition)
       .map((annotation) =>
         duplicateAnnotation(annotation, { x: 16, y: 16 }, z++),
       );
@@ -1116,7 +1141,12 @@ export class SceneEditor {
   #onlySelected(): Annotation | undefined {
     if (this.#selectedIds.size !== 1) return undefined;
     const id = this.#selectedIds.values().next().value;
-    return id ? this.#store.getById(id) : undefined;
+    return id ? this.#resolvedById(id) : undefined;
+  }
+
+  #resolvedById(id: string): Annotation | undefined {
+    const annotation = this.#store.getById(id);
+    return annotation ? resolveElementPinPosition(annotation) : undefined;
   }
 
   #pruneSelection(): void {
@@ -1134,18 +1164,19 @@ export class SceneEditor {
   #render(): void {
     if (this.#destroyed) return;
     const snapshot = this.#store.getSnapshot();
-    const sceneSnapshot = {
-      ...snapshot,
-      annotations: snapshot.annotations.filter(({ type }) => type !== "note"),
-    };
+    const sceneAnnotations = snapshot.annotations.filter(
+      ({ type }) => type !== "note",
+    );
     if (this.#toolbar.hidden) {
+      this.#anchorSignature = "";
       this.#renderer.render(
-        { ...sceneSnapshot, annotations: [] },
+        { ...snapshot, annotations: [] },
         { selectedIds: new Set() },
       );
-      this.#updateControls(sceneSnapshot.annotations.length);
+      this.#updateControls(sceneAnnotations.length);
       return;
     }
+    this.#anchorSignature = anchorSignature(snapshot.annotations);
     const session = this.#session;
     const overrides = new Map<string, Annotation>();
     const previews: Annotation[] = [];
@@ -1165,14 +1196,30 @@ export class SceneEditor {
       overrides.set(session.original.id, session.draft);
     }
     if (session?.kind === "marquee") marquee = session.current;
-    this.#renderer.render(sceneSnapshot, {
+    this.#renderer.render(snapshot, {
       selectedIds:
         this.#tool === "select" ? this.#selectedIds : new Set<string>(),
       overrides,
       previews,
       ...(marquee ? { marquee } : {}),
     });
-    this.#updateControls(sceneSnapshot.annotations.length);
+    this.#updateControls(sceneAnnotations.length);
+  }
+
+  #syncAnchorWatch(): void {
+    const hasPins = this.#store
+      .getSnapshot()
+      .annotations.some(({ type }) => type === "element-pin");
+    if (this.#toolbar.hidden || !hasPins) {
+      if (this.#anchorFrame !== undefined) {
+        window.cancelAnimationFrame(this.#anchorFrame);
+        this.#anchorFrame = undefined;
+      }
+      return;
+    }
+    this.#anchorFrame ??= window.requestAnimationFrame(
+      this.#onAnchorFrameBound,
+    );
   }
 
   #updateControls(annotationCount: number): void {
@@ -1191,6 +1238,17 @@ export class SceneEditor {
       button.disabled = this.#selectedIds.size === 0;
     }
   }
+}
+
+function anchorSignature(annotations: readonly Annotation[]): string {
+  return annotations
+    .filter(({ type }) => type === "element-pin")
+    .map(resolveElementPinPosition)
+    .map(
+      ({ geometry, id }) =>
+        `${id}:${String(geometry.x)}:${String(geometry.y)}:${String(geometry.width)}:${String(geometry.height)}`,
+    )
+    .join("|");
 }
 
 export function createSceneEditor(options: SceneEditorOptions): SceneEditor {

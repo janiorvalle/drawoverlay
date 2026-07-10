@@ -26,7 +26,9 @@ export interface DrawoverInstance {
 interface CreateShellOptions extends DrawoverOptions {
   sceneStore: SceneStore;
   onClear: () => void;
+  onCopy: (format: "json" | "markdown") => Promise<void>;
   onDestroy: () => void;
+  onExportPng: () => Promise<void>;
 }
 
 export const DRAWOVER_HOST_ID = "drawover-root";
@@ -85,26 +87,40 @@ export function createShell(options: CreateShellOptions): DrawoverInstance {
   modes.className = "modes";
   modes.setAttribute("role", "group");
   modes.setAttribute("aria-label", "Pointer mode");
-  const inspectButton = button("Inspect", "Select host page elements");
+  const inspectButton = button("Comment", "Comment on host page elements");
   const sceneButton = button("Draw", "Use the annotation scene");
   inspectButton.dataset.mode = "element-select";
   sceneButton.dataset.mode = "scene";
   modes.append(inspectButton, sceneButton);
 
-  const copyButton = button("Copy", "Copy review");
+  const copyButton = button("Copy", "Copy review as Markdown");
   copyButton.className = "command";
+  copyButton.dataset.command = "copy-markdown";
+  const copyJsonButton = button("JSON", "Copy review as JSON");
+  copyJsonButton.className = "command";
+  copyJsonButton.dataset.command = "copy-json";
+  const exportButton = button("PNG", "Export composited PNG");
+  exportButton.className = "command";
+  exportButton.dataset.command = "export-png";
   const notes = createGeneralNotesPanel(options.sceneStore);
   const clearButton = button("Clear", "Clear annotations");
   clearButton.className = "command";
   const closeButton = button("X", "Close Drawover");
   closeButton.className = "close";
   closeButton.title = "Close";
+  const commandStatus = document.createElement("span");
+  commandStatus.className = "command-status";
+  commandStatus.setAttribute("role", "status");
+  commandStatus.setAttribute("aria-live", "polite");
   toolbar.append(
     brand,
     modes,
     notes.button,
     copyButton,
+    copyJsonButton,
+    exportButton,
     clearButton,
+    commandStatus,
     closeButton,
   );
   const workspace = document.createElement("div");
@@ -145,8 +161,43 @@ export function createShell(options: CreateShellOptions): DrawoverInstance {
     applyPointerArbitration();
   };
 
-  const emit = (name: "copy-request" | "clear-request"): void => {
-    host.dispatchEvent(new CustomEvent(`drawover:${name}`, { bubbles: false }));
+  const emit = (
+    name: "copy-request" | "clear-request" | "export-request",
+    detail?: unknown,
+  ): void => {
+    host.dispatchEvent(
+      new CustomEvent(`drawover:${name}`, { bubbles: false, detail }),
+    );
+  };
+
+  const requestCopy = async (format: "json" | "markdown"): Promise<void> => {
+    emit("copy-request", { format });
+    await options.onCopy(format);
+  };
+
+  const requestExportPng = async (): Promise<void> => {
+    emit("export-request");
+    await options.onExportPng();
+  };
+
+  const runCommand = async (
+    button: HTMLButtonElement,
+    pending: string,
+    complete: string,
+    operation: () => Promise<void>,
+  ): Promise<void> => {
+    button.disabled = true;
+    commandStatus.textContent = pending;
+    try {
+      await operation();
+      commandStatus.textContent = complete;
+    } catch (error) {
+      commandStatus.textContent =
+        error instanceof Error ? error.message : "Command failed";
+      throw error;
+    } finally {
+      button.disabled = false;
+    }
   };
 
   const requestClear = (): void => {
@@ -166,7 +217,24 @@ export function createShell(options: CreateShellOptions): DrawoverInstance {
   closeButton.addEventListener("click", () => setOpen(false));
   inspectButton.addEventListener("click", () => setMode("element-select"));
   sceneButton.addEventListener("click", () => setMode("scene"));
-  copyButton.addEventListener("click", () => emit("copy-request"));
+  copyButton.addEventListener("click", () => {
+    void runCommand(copyButton, "Copying...", "Markdown copied", async () =>
+      requestCopy("markdown"),
+    ).catch(() => undefined);
+  });
+  copyJsonButton.addEventListener("click", () => {
+    void runCommand(copyJsonButton, "Copying...", "JSON copied", async () =>
+      requestCopy("json"),
+    ).catch(() => undefined);
+  });
+  exportButton.addEventListener("click", () => {
+    void runCommand(
+      exportButton,
+      "Exporting...",
+      "PNG exported",
+      requestExportPng,
+    ).catch(() => undefined);
+  });
   clearButton.addEventListener("click", requestClear);
   document.addEventListener("keydown", onKeydown);
   setMode(mode);
@@ -174,10 +242,7 @@ export function createShell(options: CreateShellOptions): DrawoverInstance {
   return {
     open: () => setOpen(true),
     close: () => setOpen(false),
-    copy: () => {
-      emit("copy-request");
-      return Promise.resolve();
-    },
+    copy: () => requestCopy("markdown"),
     clear: requestClear,
     destroy: () => {
       if (destroyed) return;

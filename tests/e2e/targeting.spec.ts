@@ -12,26 +12,32 @@ test("targets the complete selector and framework fixture matrix", async ({
 
   await page.getByTestId("fixture-testid").click();
   await expect(output).toContainText('[data-testid="fixture-testid"] | button');
+  await cancelComment(page);
 
   await page.locator("#fixture-id").click();
   await expect(output).toContainText("#fixture-id | button");
+  await cancelComment(page);
 
   await page.locator(".stable-action").click();
   await expect(output).toContainText("button.stable-action | button");
+  await cancelComment(page);
 
   await page.locator(".styles_button__x7H2p").click();
   await expect(output).toContainText("div.hash-region > button | button");
   await expect(output).not.toContainText("x7H2p");
+  await cancelComment(page);
 
   await page.locator("#react-fixture").click();
   await expect(output).toContainText(
     "#react-fixture | button | react:CheckoutAction",
   );
+  await cancelComment(page);
 
   await page.locator("#vue-fixture").click();
   await expect(output).toContainText(
     "#vue-fixture | button | vue:PaymentSummary",
   );
+  await cancelComment(page);
 });
 
 test("highlights nested and overlapping hit-test targets", async ({ page }) => {
@@ -63,6 +69,7 @@ test("selects in scrolled containers and preserves host pointer behavior", async
   await expect(page.locator("#targeting-output")).toContainText(
     "button.scrolled-action | button",
   );
+  await cancelComment(page);
 
   const passThrough = page.locator("#pass-through");
   await passThrough.click();
@@ -79,3 +86,12 @@ test("clears hover visuals when the shell closes", async ({ page }) => {
   await page.getByRole("button", { name: "Close Drawover" }).click();
   await expect(highlight).toHaveCount(0);
 });
+
+async function cancelComment(
+  page: import("@playwright/test").Page,
+): Promise<void> {
+  await page
+    .locator("#drawover-root")
+    .getByRole("button", { name: "Cancel element comment" })
+    .click();
+}

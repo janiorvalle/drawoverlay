@@ -15,6 +15,7 @@ interface StorageLocation {
 }
 
 interface BindScenePersistenceOptions {
+  hydrate?: boolean;
   storageKey?: string;
   storage?: Storage;
   location?: StorageLocation;
@@ -41,7 +42,7 @@ export function bindScenePersistence(
   let destroyed = false;
   let clearing = false;
 
-  hydrate(store, storage, key);
+  if (options.hydrate !== false) hydrate(store, storage, key);
 
   const unsubscribe = store.subscribe((snapshot) => {
     if (destroyed || clearing) return;
@@ -68,26 +69,48 @@ export function bindScenePersistence(
   };
 }
 
+/** Read a valid persisted scene for use as a store's initial history baseline. */
+export function loadPersistedAnnotations(
+  options: BindScenePersistenceOptions = {},
+): Annotation[] {
+  const storage = options.storage ?? window.localStorage;
+  const location = options.location ?? window.location;
+  const key = options.storageKey ?? getDefaultStorageKey(location);
+  const snapshot = readSnapshot(storage, key);
+  return snapshot
+    ? snapshot.annotations.map((annotation) => structuredClone(annotation))
+    : [];
+}
+
 function hydrate(store: SceneStore, storage: Storage, key: string): void {
+  const candidate = readSnapshot(storage, key);
+  if (!candidate) return;
+
+  store.transaction("Hydrate persisted scene", (transaction) => {
+    transaction.replaceAll(candidate.annotations);
+  });
+}
+
+function readSnapshot(
+  storage: Storage,
+  key: string,
+): SceneSnapshot | undefined {
   const serialized = readItem(storage, key);
-  if (serialized === null) return;
+  if (serialized === null) return undefined;
 
   let candidate: unknown;
   try {
     candidate = JSON.parse(serialized) as unknown;
   } catch {
     removeItem(storage, key);
-    return;
+    return undefined;
   }
 
   if (!isSceneSnapshot(candidate)) {
     removeItem(storage, key);
-    return;
+    return undefined;
   }
-
-  store.transaction("Hydrate persisted scene", (transaction) => {
-    transaction.replaceAll(candidate.annotations);
-  });
+  return candidate;
 }
 
 function writeSnapshot(

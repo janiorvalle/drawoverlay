@@ -49,6 +49,9 @@ export function translateAnnotation(
     translated.start.y += delta.y;
     translated.end.x += delta.x;
     translated.end.y += delta.y;
+  } else if (translated.type === "element-pin") {
+    translated.elementOffset.x += delta.x;
+    translated.elementOffset.y += delta.y;
   }
   return translated;
 }
@@ -107,6 +110,10 @@ export function resizeAnnotation(
     width,
     height,
   };
+  if (next.type === "element-pin") {
+    next.elementOffset.x += next.geometry.x - original.x;
+    next.elementOffset.y += next.geometry.y - original.y;
+  }
   if (next.type === "text") {
     const scale = height / Math.max(original.height, 1);
     next.fontSize = Math.max(8, next.fontSize * scale);

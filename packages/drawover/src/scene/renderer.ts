@@ -5,6 +5,7 @@ import type {
   SceneSnapshot,
 } from "../contracts/index.js";
 import { documentRectToViewport, documentToViewport } from "../coordinates.js";
+import { resolveElementPinPosition } from "./anchoring.js";
 import { visualBounds } from "./model.js";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -27,12 +28,19 @@ export class SceneRenderer {
 
   render(snapshot: SceneSnapshot, state: RenderState): void {
     this.#svg.replaceChildren();
+    const numberById = new Map(
+      snapshot.annotations.map(({ id }, index) => [id, index + 1] as const),
+    );
     const annotations = snapshot.annotations
+      .filter(({ type }) => type !== "note")
       .map((annotation) => state.overrides?.get(annotation.id) ?? annotation)
+      .map(resolveElementPinPosition)
       .sort((left, right) => left.z - right.z);
 
     for (const annotation of annotations) {
-      this.#svg.append(renderAnnotation(annotation));
+      this.#svg.append(
+        renderAnnotation(annotation, false, numberById.get(annotation.id)),
+      );
     }
     for (const preview of state.previews ?? []) {
       this.#svg.append(renderAnnotation(preview, true));
@@ -51,6 +59,7 @@ export class SceneRenderer {
 function renderAnnotation(
   annotation: Annotation,
   preview = false,
+  number?: number,
 ): SVGGElement {
   const group = svgElement("g");
   group.classList.add("scene-node");
@@ -60,6 +69,7 @@ function renderAnnotation(
   }
   group.dataset.annotationId = annotation.id;
   group.dataset.annotationType = annotation.type;
+  if (number !== undefined) group.dataset.annotationNumber = String(number);
 
   const viewportGeometry = documentRectToViewport(annotation.geometry);
   if (annotation.rotation !== 0) {
@@ -153,20 +163,64 @@ function renderAnnotation(
       break;
     }
     case "element-pin": {
-      const circle = svgElement("circle");
-      setAttributes(circle, {
-        cx: viewportGeometry.x + viewportGeometry.width / 2,
-        cy: viewportGeometry.y + viewportGeometry.height / 2,
-        r: Math.max(10, viewportGeometry.width / 2),
-        fill: "#e5484d",
-      });
-      group.append(circle);
+      const title = svgElement("title");
+      title.textContent = annotation.comment;
+      group.append(
+        title,
+        ...renderBadge(
+          number ?? 0,
+          viewportGeometry.x + viewportGeometry.width / 2,
+          viewportGeometry.y + viewportGeometry.height / 2,
+          Math.max(11, viewportGeometry.width / 2),
+        ),
+      );
       break;
     }
     case "note":
       break;
   }
+  if (
+    annotation.type !== "element-pin" &&
+    annotation.type !== "note" &&
+    number
+  ) {
+    group.append(
+      ...renderBadge(number, viewportGeometry.x, viewportGeometry.y, 11),
+    );
+  }
   return group;
+}
+
+function renderBadge(
+  number: number,
+  x: number,
+  y: number,
+  radius: number,
+): SVGElement[] {
+  const circle = svgElement("circle");
+  circle.dataset.annotationBadge = String(number);
+  setAttributes(circle, {
+    cx: x,
+    cy: y,
+    r: radius,
+    fill: "#e5484d",
+    stroke: "#ffffff",
+    "stroke-width": 2,
+  });
+  const text = svgElement("text");
+  text.dataset.annotationBadgeLabel = String(number);
+  setAttributes(text, {
+    x,
+    y: y + 4,
+    fill: "#ffffff",
+    "font-family": SYSTEM_FONT_FAMILY,
+    "font-size": 12,
+    "font-weight": 800,
+    "text-anchor": "middle",
+    "pointer-events": "none",
+  });
+  text.textContent = String(number);
+  return [circle, text];
 }
 
 function renderArrow(annotation: ArrowAnnotation): SVGElement[] {

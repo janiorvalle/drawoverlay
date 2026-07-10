@@ -4,11 +4,59 @@ import { SceneRenderer } from "./renderer.js";
 
 describe("SVG scene renderer", () => {
   beforeEach(() => {
+    document.body.innerHTML = "";
     Object.defineProperty(window, "scrollX", { configurable: true, value: 40 });
     Object.defineProperty(window, "scrollY", {
       configurable: true,
       value: 120,
     });
+  });
+
+  it("re-anchors an element pin from its live selector bounds", () => {
+    const target = document.createElement("button");
+    target.id = "live-target";
+    target.getBoundingClientRect = () =>
+      ({
+        x: 100,
+        y: 200,
+        width: 180,
+        height: 44,
+        top: 200,
+        right: 280,
+        bottom: 244,
+        left: 100,
+        toJSON: () => ({}),
+      }) satisfies DOMRect;
+    document.body.append(target);
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    const snapshot: SceneSnapshot = {
+      version: 1,
+      annotations: [
+        {
+          id: "pin",
+          type: "element-pin",
+          geometry: { x: 10, y: 20, width: 26, height: 26 },
+          z: 1,
+          rotation: 0,
+          comment: "Anchored",
+          element: {
+            selector: { primary: "#live-target", fallbacks: [] },
+            facts: {
+              tag: "button",
+              attributes: {},
+              bbox: { x: 10, y: 20, width: 30, height: 40 },
+            },
+          },
+          elementOffset: { x: 167, y: -13 },
+        },
+      ],
+    };
+
+    new SceneRenderer(svg).render(snapshot, { selectedIds: new Set() });
+
+    const badge = svg.querySelector('[data-annotation-id="pin"] circle');
+    expect(badge?.getAttribute("cx")).toBe("280");
+    expect(badge?.getAttribute("cy")).toBe("200");
   });
 
   it("renders model geometry from document coordinates with selection handles", () => {
@@ -191,5 +239,77 @@ describe("SVG scene renderer", () => {
     expect(box?.getAttribute("y")).toBe("20");
     expect(box?.getAttribute("width")).toBe("180");
     expect(box?.getAttribute("height")).toBe("100");
+  });
+
+  it("keeps badge numbers in scene order when z-order and notes differ", () => {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    const snapshot: SceneSnapshot = {
+      version: 1,
+      annotations: [
+        {
+          id: "pin",
+          type: "element-pin",
+          geometry: { x: 200, y: 200, width: 26, height: 26 },
+          z: 30,
+          rotation: 0,
+          comment: "First in scene order",
+          element: {
+            selector: { primary: "#target", fallbacks: [] },
+            facts: {
+              tag: "button",
+              attributes: {},
+              bbox: { x: 180, y: 180, width: 80, height: 30 },
+            },
+          },
+          elementOffset: { x: 20, y: 20 },
+        },
+        {
+          id: "note",
+          type: "note",
+          geometry: { x: 0, y: 0, width: 0, height: 0 },
+          z: 0,
+          rotation: 0,
+          text: "Second in scene order",
+        },
+        {
+          id: "rect",
+          type: "rect",
+          geometry: { x: 100, y: 160, width: 80, height: 40 },
+          z: 10,
+          rotation: 0,
+          stroke: "#e5484d",
+          fill: "transparent",
+          strokeWidth: 2,
+        },
+      ],
+    };
+
+    new SceneRenderer(svg).render(snapshot, { selectedIds: new Set() });
+
+    const rendered = svg.querySelectorAll<SVGGElement>("[data-annotation-id]");
+    expect([...rendered].map(({ dataset }) => dataset.annotationId)).toEqual([
+      "rect",
+      "pin",
+    ]);
+    expect(
+      svg
+        .querySelector('[data-annotation-id="pin"]')
+        ?.getAttribute("data-annotation-number"),
+    ).toBe("1");
+    expect(
+      svg
+        .querySelector('[data-annotation-id="rect"]')
+        ?.getAttribute("data-annotation-number"),
+    ).toBe("3");
+    expect(
+      svg.querySelector(
+        '[data-annotation-id="pin"] [data-annotation-badge-label]',
+      )?.textContent,
+    ).toBe("1");
+    expect(
+      svg.querySelector(
+        '[data-annotation-id="rect"] [data-annotation-badge-label]',
+      )?.textContent,
+    ).toBe("3");
   });
 });

@@ -5,6 +5,7 @@ import type { DrawoverInstance } from "drawover";
 
 export function DrawoverBootstrap() {
   useEffect(() => {
+    let cancelled = false;
     let instance: DrawoverInstance | undefined;
 
     if (
@@ -12,11 +13,16 @@ export function DrawoverBootstrap() {
       process.env.NEXT_PUBLIC_DRAWOVER === "true"
     ) {
       void import("drawover").then(({ init }) => {
-        instance = init();
+        const mounted = init();
+        if (cancelled) mounted.destroy();
+        else instance = mounted;
       });
     }
 
-    return () => instance?.destroy();
+    return () => {
+      cancelled = true;
+      instance?.destroy();
+    };
   }, []);
 
   return null;

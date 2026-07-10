@@ -33,7 +33,9 @@ test("shell mode exclusively arbitrates scene pointer events", async ({
   await expect(targeting).toHaveCSS("pointer-events", "none");
   await host.getByRole("button", { name: "Use the annotation scene" }).click();
   await expect(scene).toHaveCSS("pointer-events", "auto");
-  await host.getByRole("button", { name: "Select host page elements" }).click();
+  await host
+    .getByRole("button", { name: "Comment on host page elements" })
+    .click();
   await expect(scene).toHaveCSS("pointer-events", "none");
 });
 

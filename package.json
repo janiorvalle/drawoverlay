@@ -23,6 +23,7 @@
     "prepare": "node scripts/install-hooks.mjs"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.12.1",
     "@eslint/js": "10.0.1",
     "@playwright/test": "1.61.1",
     "@size-limit/esbuild": "12.1.0",

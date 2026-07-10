@@ -246,7 +246,9 @@ describe("scene interactions", () => {
     rectangle = svg?.querySelector<SVGGElement>(
       '[data-annotation-type="rect"]',
     );
-    expect(rectangle?.querySelector("text")).toBeNull();
+    expect(
+      rectangle?.querySelector("text:not([data-annotation-badge-label])"),
+    ).toBeNull();
   });
 
   it("leaves shortcuts inside a closed host shadow root untouched", () => {
