@@ -84,6 +84,37 @@ describe("element reference capture", () => {
     });
   });
 
+  it("climbs past library-internal component names to user code", () => {
+    // Radix-style wrapping: Primitive.button between the DOM and user code.
+    const badge = document.createElement("span");
+    badge.id = "radix-badge";
+    document.body.append(badge);
+    const PrimitiveButton = (): null => null;
+    Object.defineProperty(PrimitiveButton, "displayName", {
+      value: "Primitive.button",
+    });
+    const forwardRef = (): null => null;
+    Object.defineProperty(forwardRef, "displayName", { value: "ForwardRef" });
+    const NewBadge = (): null => null;
+    Object.defineProperty(badge, "__reactFiber$fixture", {
+      value: {
+        type: "span",
+        return: {
+          type: PrimitiveButton,
+          return: {
+            type: forwardRef,
+            return: { type: NewBadge, return: null },
+          },
+        },
+      },
+    });
+
+    expect(captureElementRef(badge).component).toEqual({
+      framework: "react",
+      name: "NewBadge",
+    });
+  });
+
   it("reads Vue component metadata without deriving unknown fields", () => {
     const button = document.createElement("button");
     button.id = "vue-button";

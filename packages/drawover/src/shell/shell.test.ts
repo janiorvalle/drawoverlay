@@ -82,7 +82,7 @@ describe("shell", () => {
     instance.destroy();
   });
 
-  it("hydrates and clears the storage key override", () => {
+  it("hydrates and clears the storage key override", async () => {
     const key = "custom-shell-scene";
     localStorage.setItem(
       key,
@@ -90,12 +90,15 @@ describe("shell", () => {
         version: 1,
         annotations: [
           {
-            id: "note-1",
-            type: "note",
-            geometry: { x: 0, y: 0, width: 0, height: 0 },
+            id: "text-1",
+            type: "text",
+            geometry: { x: 40, y: 40, width: 160, height: 24 },
             z: 0,
             rotation: 0,
-            text: "Hydrated note",
+            text: "Hydrated text",
+            color: "#e5484d",
+            fontSize: 16,
+            align: "left",
           },
         ],
       }),
@@ -104,15 +107,14 @@ describe("shell", () => {
     current = instance;
     instance.open();
     const shadow = document.getElementById(DRAWOVER_HOST_ID)?.shadowRoot;
-    shadow
-      ?.querySelector<HTMLButtonElement>('[aria-label="Open general notes"]')
-      ?.click();
 
-    expect(
-      shadow?.querySelector<HTMLTextAreaElement>(
-        '[aria-label="Edit general note"]',
-      )?.value,
-    ).toBe("Hydrated note");
+    await vi.waitFor(() => {
+      expect(
+        shadow?.querySelector(
+          '[data-layer="scene"] [data-annotation-type="text"]',
+        )?.textContent,
+      ).toContain("Hydrated text");
+    });
 
     instance.clear();
     expect(localStorage.getItem(key)).toBeNull();

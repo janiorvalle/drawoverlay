@@ -5,7 +5,7 @@ import type {
 } from "../contracts/index.js";
 import { documentToViewport } from "../coordinates.js";
 import { createAnnotationId, nextZ } from "../scene/model.js";
-import { ELEMENT_SELECTED_EVENT } from "../targeting/controller.js";
+import { ELEMENT_COMMENT_REQUEST_EVENT } from "../targeting/controller.js";
 import {
   resolveElement,
   resolveElementDocumentRect,
@@ -48,6 +48,8 @@ export function createElementCommentsController(
   const form = document.createElement("form");
   form.className = "element-comment-form";
 
+  const chip = document.createElement("code");
+  chip.className = "element-comment-chip";
   const heading = document.createElement("h2");
   heading.id = "drawover-comment-title";
   const textarea = document.createElement("textarea");
@@ -61,7 +63,7 @@ export function createElementCommentsController(
   save.type = "submit";
   save.className = "element-comment-save";
   actions.append(cancel, save);
-  form.append(heading, textarea, actions);
+  form.append(chip, heading, textarea, actions);
   popover.append(form);
   shadow.append(style);
   root.append(popover);
@@ -120,6 +122,8 @@ export function createElementCommentsController(
             ? referencedElement
             : trigger;
     heading.textContent = next.annotation ? "Edit comment" : "Add comment";
+    chip.textContent = next.reference.selector.primary;
+    chip.title = next.reference.selector.primary;
     textarea.value = next.annotation?.comment ?? "";
     popover.hidden = false;
     position();
@@ -127,7 +131,7 @@ export function createElementCommentsController(
     textarea.select();
   };
 
-  const onElementSelected = (event: Event): void => {
+  const onCommentRequest = (event: Event): void => {
     const reference = (event as CustomEvent<ElementRef>).detail;
     open({ reference });
   };
@@ -201,7 +205,7 @@ export function createElementCommentsController(
     }
     close();
   });
-  host.addEventListener(ELEMENT_SELECTED_EVENT, onElementSelected);
+  host.addEventListener(ELEMENT_COMMENT_REQUEST_EVENT, onCommentRequest);
   host.addEventListener("drawover:clear-request", onClear);
   scene.addEventListener("dblclick", onSceneDoubleClick);
   document.addEventListener("keydown", onKeydown);
@@ -214,7 +218,7 @@ export function createElementCommentsController(
       if (destroyed) return;
       destroyed = true;
       observer.disconnect();
-      host.removeEventListener(ELEMENT_SELECTED_EVENT, onElementSelected);
+      host.removeEventListener(ELEMENT_COMMENT_REQUEST_EVENT, onCommentRequest);
       host.removeEventListener("drawover:clear-request", onClear);
       scene.removeEventListener("dblclick", onSceneDoubleClick);
       document.removeEventListener("keydown", onKeydown);
@@ -247,12 +251,28 @@ const elementCommentStyles = `
   width: min(300px, calc(100vw - 16px));
   padding: 12px;
   border: 1px solid var(--dv-border);
-  border-radius: 8px;
-  background: var(--dv-bg);
-  box-shadow: 0 12px 32px rgb(17 24 39 / 24%);
+  border-radius: var(--dv-radius);
+  background: var(--dv-surface-raised);
+  box-shadow: var(--dv-shadow);
+  backdrop-filter: var(--dv-blur);
+  -webkit-backdrop-filter: var(--dv-blur);
   color: var(--dv-text);
   pointer-events: auto;
   gap: 10px;
+}
+
+.element-comment-chip {
+  justify-self: start;
+  max-width: 100%;
+  overflow: hidden;
+  padding: 2px 7px;
+  border: 1px solid var(--dv-border);
+  border-radius: 5px;
+  background: var(--dv-accent-soft);
+  color: var(--dv-selected-text);
+  font: 500 11px/1.5 var(--dv-font-mono);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .element-comment-form {
@@ -262,7 +282,8 @@ const elementCommentStyles = `
 
 .element-comment-popover h2 {
   margin: 0;
-  font-size: 14px;
+  font-size: 12px;
+  font-weight: 600;
   line-height: 1.3;
 }
 
@@ -272,11 +293,16 @@ const elementCommentStyles = `
   resize: vertical;
   padding: 8px;
   border: 1px solid var(--dv-border);
-  border-radius: 6px;
-  background: var(--dv-bg);
+  border-radius: var(--dv-radius-inner);
+  background: var(--dv-accent-soft);
   color: var(--dv-text);
   font: inherit;
-  line-height: 1.4;
+  line-height: 1.45;
+}
+
+.element-comment-popover textarea:focus-visible {
+  border-color: var(--dv-focus-ring);
+  outline: none;
 }
 
 .element-comment-actions {
@@ -287,14 +313,28 @@ const elementCommentStyles = `
 
 .element-comment-actions button {
   min-width: 68px;
-  height: 30px;
-  padding: 0 9px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--dv-border);
+  color: var(--dv-muted);
 }
 
-.element-comment-save {
-  border-color: var(--dv-accent);
+.element-comment-actions button:hover {
+  color: var(--dv-text);
+  background: var(--dv-accent-soft);
+}
+
+.element-comment-save,
+.element-comment-actions button.element-comment-save {
+  border-color: transparent;
   background: var(--dv-accent);
   color: var(--dv-accent-text);
-  font-weight: 700;
+  font-weight: 600;
+}
+
+.element-comment-actions button.element-comment-save:hover {
+  color: var(--dv-accent-text);
+  background: var(--dv-accent);
+  filter: brightness(1.08);
 }
 `;

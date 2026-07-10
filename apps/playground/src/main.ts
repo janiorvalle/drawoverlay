@@ -80,6 +80,7 @@ app.innerHTML = `
           <span>Save this card for next time</span>
         </label>
         <button data-testid="checkout-submit" type="submit">Place order</button>
+        <button data-testid="gradient-cta" class="gradient-cta" type="button">Start a match now</button>
       </form>
     </section>
     <aside class="summary" aria-labelledby="summary-title">
@@ -177,10 +178,15 @@ if (vueFixture) {
   });
 }
 
-document.querySelector("#pass-through")?.addEventListener("click", (event) => {
-  const count = (event.currentTarget as HTMLElement).querySelector("span");
-  if (count) count.textContent = String(Number(count.textContent) + 1);
-});
+// Radix-style components activate on pointerdown, focus, or click; the
+// fixture counts all three so tests can prove none reach the host while
+// reviewing.
+for (const type of ["click", "pointerdown", "focus"]) {
+  document.querySelector("#pass-through")?.addEventListener(type, (event) => {
+    const count = (event.currentTarget as HTMLElement).querySelector("span");
+    if (count) count.textContent = String(Number(count.textContent) + 1);
+  });
+}
 
 if (import.meta.env.DEV || import.meta.env.VITE_DRAWOVER === "true") {
   void import("./drawover-dev.js").then(({ installDrawoverDev }) =>

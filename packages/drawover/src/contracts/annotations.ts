@@ -116,20 +116,13 @@ export interface ElementPinAnnotation extends AnnotationBase {
   spatialDescription?: string;
 }
 
-/** A page-level note. Its zero-size geometry records its document anchor. */
-export interface NoteAnnotation extends AnnotationBase {
-  type: "note";
-  text: string;
-}
-
 /** Frozen scene annotation contract shared by all product domains. */
 export type Annotation =
   | RectAnnotation
   | ArrowAnnotation
   | TextAnnotation
   | ImageAnnotation
-  | ElementPinAnnotation
-  | NoteAnnotation;
+  | ElementPinAnnotation;
 
 /** Versioned, serializable scene snapshot. */
 export interface SceneSnapshot {

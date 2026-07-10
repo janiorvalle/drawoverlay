@@ -58,7 +58,7 @@ test("highlights nested and overlapping hit-test targets", async ({ page }) => {
   );
 });
 
-test("selects in scrolled containers and preserves host pointer behavior", async ({
+test("selects in scrolled containers and consumes reviewing clicks", async ({
   page,
 }) => {
   const scroller = page.locator(".scroll-fixture");
@@ -71,9 +71,22 @@ test("selects in scrolled containers and preserves host pointer behavior", async
   );
   await cancelComment(page);
 
+  // Reviewing must never operate the page: the click selects the button
+  // for commenting but its own handler (and any navigation) never fires.
   const passThrough = page.locator("#pass-through");
   await passThrough.click();
-  await expect(passThrough).toContainText("Host click count: 1");
+  await expect(page.locator("#targeting-output")).toContainText(
+    "#pass-through | button",
+  );
+  await expect(passThrough).toContainText("Host click count: 0");
+  await cancelComment(page);
+
+  // With Drawover closed, the page behaves normally again (the fixture
+  // counts the pointerdown, the focus, and the click).
+  const host = page.locator("#drawover-root");
+  await host.getByRole("button", { name: "Close Drawover" }).click();
+  await passThrough.click();
+  await expect(passThrough).toContainText("Host click count: 3");
 });
 
 test("clears hover visuals when the shell closes", async ({ page }) => {
@@ -87,11 +100,32 @@ test("clears hover visuals when the shell closes", async ({ page }) => {
   await expect(highlight).toHaveCount(0);
 });
 
+test("pins multiple selections and toggles them off individually", async ({
+  page,
+}) => {
+  const host = page.locator("#drawover-root");
+  const selections = host.locator("[data-targeting-selection]");
+
+  await page.locator("#fixture-id").click();
+  await page.getByTestId("fixture-testid").click();
+  await expect(selections).toHaveCount(2);
+  await expect(host.getByRole("button", { name: "Add comment" })).toHaveCount(
+    2,
+  );
+
+  // Clicking a pinned element again unpins only that one.
+  await page.locator("#fixture-id").click();
+  await expect(selections).toHaveCount(1);
+
+  // Escape clears the rest.
+  await page.keyboard.press("Escape");
+  await expect(selections).toHaveCount(0);
+});
+
 async function cancelComment(
   page: import("@playwright/test").Page,
 ): Promise<void> {
-  await page
-    .locator("#drawover-root")
-    .getByRole("button", { name: "Cancel element comment" })
-    .click();
+  // Selection no longer opens the comment popover; Escape clears the pinned
+  // selection so the next assertion starts from a clean slate.
+  await page.keyboard.press("Escape");
 }

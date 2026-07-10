@@ -29,6 +29,6 @@ describe("section 5 serializer contract fixtures", () => {
 
   it("covers the annotation discriminators used by the section 5 fixture", () => {
     const types = new Set(section5Scene.annotations.map(({ type }) => type));
-    expect(types).toEqual(new Set(["element-pin", "rect", "text", "note"]));
+    expect(types).toEqual(new Set(["element-pin", "rect", "text"]));
   });
 });

@@ -7,6 +7,7 @@ import type {
 import { documentRectToViewport, documentToViewport } from "../coordinates.js";
 import { resolveElementPinPosition } from "./anchoring.js";
 import { visualBounds } from "./model.js";
+import { ANNOTATION_COLORS, SCENE_WHITE } from "../theme/tokens.js";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 const SYSTEM_FONT_FAMILY =
@@ -32,7 +33,6 @@ export class SceneRenderer {
       snapshot.annotations.map(({ id }, index) => [id, index + 1] as const),
     );
     const annotations = snapshot.annotations
-      .filter(({ type }) => type !== "note")
       .map((annotation) => state.overrides?.get(annotation.id) ?? annotation)
       .map(resolveElementPinPosition)
       .sort((left, right) => left.z - right.z);
@@ -176,14 +176,8 @@ function renderAnnotation(
       );
       break;
     }
-    case "note":
-      break;
   }
-  if (
-    annotation.type !== "element-pin" &&
-    annotation.type !== "note" &&
-    number
-  ) {
+  if (annotation.type !== "element-pin" && number) {
     group.append(
       ...renderBadge(number, viewportGeometry.x, viewportGeometry.y, 11),
     );
@@ -203,8 +197,8 @@ function renderBadge(
     cx: x,
     cy: y,
     r: radius,
-    fill: "#e5484d",
-    stroke: "#ffffff",
+    fill: ANNOTATION_COLORS[0],
+    stroke: SCENE_WHITE,
     "stroke-width": 2,
   });
   const text = svgElement("text");
@@ -212,7 +206,7 @@ function renderBadge(
   setAttributes(text, {
     x,
     y: y + 4,
-    fill: "#ffffff",
+    fill: SCENE_WHITE,
     "font-family": SYSTEM_FONT_FAMILY,
     "font-size": 12,
     "font-weight": 800,
@@ -323,9 +317,9 @@ function renderSingleSelection(annotation: Annotation): SVGGElement {
     y1: geometry.y,
     x2: centerX,
     y2: geometry.y - 24,
-    stroke: "#1769e0",
     "stroke-width": 1,
   });
+  rotateLine.classList.add("rotate-line");
   group.append(rotateLine, handle(centerX, geometry.y - 28, "rotate", 5));
   return group;
 }

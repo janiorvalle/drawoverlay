@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import type { NoteAnnotation } from "../contracts/index.js";
+import type { TextAnnotation } from "../contracts/index.js";
 import { createSceneStore } from "../scene/store.js";
 import {
   bindScenePersistence,
@@ -91,13 +91,6 @@ describe("scene persistence", () => {
   it.each([
     ["corrupt JSON", "{"],
     ["an unknown version", JSON.stringify({ version: 2, annotations: [] })],
-    [
-      "an invalid annotation",
-      JSON.stringify({
-        version: 1,
-        annotations: [{ id: "bad", type: "note", text: "Missing fields" }],
-      }),
-    ],
   ])("falls back to an empty scene for %s", (_label, value) => {
     const key = "invalid-scene";
     localStorage.setItem(key, value);
@@ -106,6 +99,31 @@ describe("scene persistence", () => {
 
     expect(store.getSnapshot().annotations).toEqual([]);
     expect(localStorage.getItem(key)).toBeNull();
+    binding.destroy();
+  });
+
+  it("drops unknown annotation types individually while keeping the rest", () => {
+    const key = "mixed-scene";
+    const kept = note("keep-1", "Still valid");
+    localStorage.setItem(
+      key,
+      JSON.stringify({
+        version: 1,
+        annotations: [
+          { id: "retired", type: "note", text: "Removed feature" },
+          kept,
+        ],
+      }),
+    );
+    const store = createSceneStore(
+      loadPersistedAnnotations({ storageKey: key }),
+    );
+    const binding = bindScenePersistence(store, {
+      storageKey: key,
+      hydrate: false,
+    });
+
+    expect(store.getSnapshot().annotations).toEqual([kept]);
     binding.destroy();
   });
 
@@ -134,13 +152,16 @@ describe("scene persistence", () => {
   });
 });
 
-function note(id: string, text: string): NoteAnnotation {
+function note(id: string, text: string): TextAnnotation {
   return {
     id,
-    type: "note",
-    geometry: { x: 0, y: 0, width: 0, height: 0 },
+    type: "text",
+    geometry: { x: 0, y: 0, width: 120, height: 24 },
     z: 0,
     rotation: 0,
     text,
+    color: "#e5484d",
+    fontSize: 16,
+    align: "left",
   };
 }

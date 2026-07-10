@@ -485,3 +485,22 @@ button[type="submit"] {
     grid-template-columns: 1fr;
   }
 }
+
+/* Tailwind v4 archetype: transparent background-color with a gradient that
+   uses a modern color-interpolation hint. PNG capture must preserve it. */
+.gradient-cta {
+  width: 100%;
+  margin-top: 10px;
+  padding: 12px;
+  border: 0;
+  border-radius: 6px;
+  background-color: transparent;
+  background-image: linear-gradient(
+    in oklab,
+    rgb(184, 78, 0) 0%,
+    rgb(179, 76, 0) 100%
+  );
+  color: #ffffff;
+  font: inherit;
+  font-weight: 600;
+}

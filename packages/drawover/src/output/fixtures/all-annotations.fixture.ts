@@ -11,14 +11,6 @@ export const allAnnotationsScene = {
   version: 1,
   annotations: [
     {
-      id: "note-lowest-number",
-      type: "note",
-      geometry: { x: 0, y: 0, width: 0, height: 0 },
-      z: 99,
-      rotation: 0,
-      text: 'Keep the "quiet" treatment\non narrow screens',
-    },
-    {
       id: "image-second",
       type: "image",
       geometry: { x: 840, y: 96, width: 320, height: 180 },

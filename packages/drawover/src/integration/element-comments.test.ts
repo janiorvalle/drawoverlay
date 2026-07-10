@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { ElementRef } from "../contracts/index.js";
 import { init } from "../index.js";
 import { DRAWOVER_HOST_ID, type DrawoverInstance } from "../shell/shell.js";
-import { ELEMENT_SELECTED_EVENT } from "../targeting/controller.js";
+import { ELEMENT_COMMENT_REQUEST_EVENT } from "../targeting/controller.js";
 
 let instance: DrawoverInstance | undefined;
 
@@ -28,7 +28,7 @@ describe("element comment integration", () => {
     target?.focus();
 
     host.dispatchEvent(
-      new CustomEvent<ElementRef>(ELEMENT_SELECTED_EVENT, {
+      new CustomEvent<ElementRef>(ELEMENT_COMMENT_REQUEST_EVENT, {
         detail: elementReference(),
       }),
     );
@@ -70,7 +70,7 @@ describe("element comment integration", () => {
     instance.open();
     const host = document.getElementById(DRAWOVER_HOST_ID);
     host?.dispatchEvent(
-      new CustomEvent<ElementRef>(ELEMENT_SELECTED_EVENT, {
+      new CustomEvent<ElementRef>(ELEMENT_COMMENT_REQUEST_EVENT, {
         detail: elementReference(),
       }),
     );

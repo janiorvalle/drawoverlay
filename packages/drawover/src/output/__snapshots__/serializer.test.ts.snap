@@ -15,19 +15,6 @@ exports[`output serializer > keeps JSON in exact parity with the versioned scene
   },
   "annotations": [
     {
-      "id": "note-lowest-number",
-      "type": "note",
-      "geometry": {
-        "x": 0,
-        "y": 0,
-        "width": 0,
-        "height": 0
-      },
-      "z": 99,
-      "rotation": 0,
-      "text": "Keep the \\"quiet\\" treatment\\non narrow screens"
-    },
-    {
       "id": "image-second",
       "type": "image",
       "geometry": {
@@ -148,35 +135,33 @@ exports[`output serializer > snapshots every annotation discriminator and page c
 - URL: https://example.com/review?fixture=output
 - Viewport: 1280×720 @1.5x
 - Captured: 2026-07-09T18:45:30Z
-- Annotations: 1 element comment, 4 drawings, 1 note
+- Annotations: 1 element comment, 4 drawings
 
 ## Element comments
 
-### [3] "Rename \\"Save\\"\\nto avoid ambiguity"
+### [2] "Rename \\"Save\\"\\nto avoid ambiguity"
 - Element: <button type="submit" name="save\\"profile"> "Save draft"
 - Selector: #profile-save
 - Position: 96,196 → 240,244 (doc coords); right side of <form id="profile">
 
 ## Drawings (proposed UI — these elements do NOT exist yet)
 
-### [2] Image: "Account \\"empty state\\""
+### [1] Image: "Account \\"empty state\\""
 - Below <nav>, aligned with the right edge of <main>
 - Doc coords: 840,96 → 1160,276
 - Opacity: 0.75
 - Rotation: -5°
 
-### [4] Arrow
+### [3] Arrow
 - From <aside> toward the new summary region
 - Start/end: 240,224 → 460,128 (doc coords)
 - Rotation: 15°
 
-### [5] Rectangle
+### [4] Rectangle
 - Doc coords: 32,80 → 672,152
 
-### [6] Text: "Welcome, \\"Ada\\""
+### [5] Text: "Welcome, \\"Ada\\""
+- Inside drawing [4]
 - Doc coords: 64,98 → 324,130
-- Intent: Use as the proposed page heading
-
-## General notes
-- [1] "Keep the \\"quiet\\" treatment\\non narrow screens""
+- Intent: Use as the proposed page heading"
 `;

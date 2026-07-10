@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { NoteAnnotation, RectAnnotation } from "../contracts/index.js";
+import type { RectAnnotation, TextAnnotation } from "../contracts/index.js";
 import { createSceneStore } from "./store.js";
 
 const firstNote = note("note-1", "First");
@@ -77,14 +77,17 @@ describe("scene store", () => {
   });
 });
 
-function note(id: string, text: string): NoteAnnotation {
+function note(id: string, text: string): TextAnnotation {
   return {
     id,
-    type: "note",
-    geometry: { x: 0, y: 0, width: 0, height: 0 },
+    type: "text",
+    geometry: { x: 0, y: 0, width: 120, height: 24 },
     z: 0,
     rotation: 0,
     text,
+    color: "#e5484d",
+    fontSize: 16,
+    align: "left",
   };
 }
 

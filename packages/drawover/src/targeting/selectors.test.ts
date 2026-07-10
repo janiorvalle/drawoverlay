@@ -26,6 +26,22 @@ describe("selector engine", () => {
     }
   });
 
+  it("prefers a unique aria-label over utility-class stable paths", () => {
+    // Tailwind SPA archetype: no testid/id, ambiguous tag, utility classes.
+    document.body.innerHTML = `
+      <nav aria-label="Main navigation" class="flex h-20">
+        <nav aria-label="User menu" class="flex h-10"></nav>
+      </nav>
+    `;
+    const element = document.querySelector('[aria-label="Main navigation"]');
+    if (!element) throw new Error("fixture missing");
+
+    const selector = createSelectorChain(element);
+
+    expect(selector.primary).toBe('nav[aria-label="Main navigation"]');
+    expect(document.querySelector(selector.primary)).toBe(element);
+  });
+
   it("skips duplicate preferred attributes and finds a unique stable path", () => {
     document.body.innerHTML = `
       <section class="billing"><button data-testid="action">Pay</button></section>
@@ -41,14 +57,14 @@ describe("selector engine", () => {
   });
 
   it("escapes identifiers and attribute values before checking uniqueness", () => {
-    document.body.innerHTML = `<button data-testid='save"draft' id="123:save">Save</button>`;
+    document.body.innerHTML = `<button data-testid='save"draft' id="123save">Save</button>`;
     const element = document.querySelector("button");
     if (!element) throw new Error("fixture missing");
 
     const selector = createSelectorChain(element);
 
     expect(selector.primary).toBe('[data-testid="save\\"draft"]');
-    expect(selector.fallbacks).toContain("#\\31 23\\:save");
+    expect(selector.fallbacks).toContain("#\\31 23save");
   });
 
   it("excludes high-entropy and CSS-module class names from stable paths", () => {

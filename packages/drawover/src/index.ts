@@ -12,9 +12,10 @@ import {
 } from "./persistence/persistence.js";
 import { createSceneStore } from "./scene/store.js";
 import {
-  copyJson as copySceneJson,
-  copyMarkdown as copySceneMarkdown,
+  copyReview as copySceneReview,
+  copyReviewImage as copySceneReviewImage,
   exportCompositedPng as exportScenePng,
+  serializeReview,
 } from "./output/index.js";
 import { createElementCommentsController } from "./integration/element-comments.js";
 
@@ -34,8 +35,7 @@ export {
   viewportToDocument,
 } from "./coordinates.js";
 export {
-  copyJson,
-  copyMarkdown,
+  copyReview,
   exportCompositedPng,
   serializeReview,
   writeReviewToClipboard,
@@ -44,6 +44,7 @@ export type {
   ClipboardFormat,
   ClipboardWriter,
   CompositedPngOptions,
+  CopyReviewResult,
   PngExportDependencies,
 } from "./output/index.js";
 export type {
@@ -72,21 +73,38 @@ export function init(options: DrawoverOptions = {}): DrawoverInstance {
     ...options,
     sceneStore: store,
     onClear: () => persistence.clear(),
-    onCopy: async (format) => {
-      const page = capturePageContext();
-      if (format === "json") await copySceneJson(store.getSnapshot(), page);
-      else await copySceneMarkdown(store.getSnapshot(), page);
+    onCopy: async () => {
+      const review = serializeReview(store.getSnapshot(), capturePageContext());
+      const result = await copySceneReview(review, () => {
+        if (!sceneLayer) {
+          throw new Error("The annotation scene is unavailable.");
+        }
+        return exportScenePng({ annotationSvg: sceneLayer });
+      });
+      return result === "markdown+png"
+        ? "Copied review + image"
+        : "Copied review (Markdown only)";
+    },
+    onCopyFlavor: async (flavor) => {
+      if (flavor === "markdown") {
+        const review = serializeReview(
+          store.getSnapshot(),
+          capturePageContext(),
+        );
+        await navigator.clipboard.writeText(review.markdown);
+        return "Markdown copied";
+      }
+      await copySceneReviewImage(() => {
+        if (!sceneLayer) {
+          throw new Error("The annotation scene is unavailable.");
+        }
+        return exportScenePng({ annotationSvg: sceneLayer });
+      });
+      return "Image copied";
     },
     onDestroy: () => {
       persistence.destroy();
       activeInstance = undefined;
-    },
-    onExportPng: async () => {
-      if (!sceneLayer || !shadow) {
-        throw new Error("The annotation scene is unavailable.");
-      }
-      const blob = await exportScenePng({ annotationSvg: sceneLayer });
-      downloadBlob(shadow, blob, "drawover-review.png");
     },
   });
   const host = document.getElementById(DRAWOVER_HOST_ID);
@@ -133,16 +151,4 @@ function capturePageContext() {
     },
     capturedAt: new Date().toISOString(),
   };
-}
-
-function downloadBlob(shadow: ShadowRoot, blob: Blob, filename: string): void {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  link.hidden = true;
-  shadow.append(link);
-  link.click();
-  link.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 0);
 }

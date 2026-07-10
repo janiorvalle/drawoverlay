@@ -1,14 +1,70 @@
-import type {
-  PageContext,
-  SceneSnapshot,
-  SerializedReview,
-} from "../contracts/index.js";
-import { serializeReview } from "./serializer.js";
+import type { SerializedReview } from "../contracts/index.js";
 
 export type ClipboardFormat = "markdown" | "json";
 
 export interface ClipboardWriter {
   writeText(value: string): Promise<void>;
+  write?(items: ClipboardItem[]): Promise<void>;
+}
+
+export type CopyReviewResult = "markdown+png" | "markdown-only";
+
+/**
+ * One-press export: put the Markdown review AND the composited PNG on the
+ * clipboard as a single multi-format item, so text targets paste the
+ * Markdown and image targets paste the screenshot. The PNG blob is passed
+ * as a promise so the clipboard write stays inside the user gesture while
+ * the capture renders. Falls back to Markdown-only when the browser or the
+ * capture refuses.
+ */
+export async function copyReview(
+  review: SerializedReview,
+  renderPng: () => Promise<Blob>,
+  clipboard: ClipboardWriter = getClipboard(),
+): Promise<CopyReviewResult> {
+  const clipboardItem = Reflect.get(globalThis, "ClipboardItem") as
+    typeof ClipboardItem | undefined;
+  if (clipboard.write && clipboardItem) {
+    const png = renderPng();
+    // The write consumes this promise; keep its rejection observed so a
+    // failed capture cannot surface as an unhandled rejection.
+    png.catch(() => undefined);
+    try {
+      await clipboard.write([
+        new clipboardItem({
+          "text/plain": Promise.resolve(
+            new Blob([review.markdown], { type: "text/plain" }),
+          ),
+          "image/png": png,
+        }),
+      ]);
+      return "markdown+png";
+    } catch {
+      // Image clipboard rejected (permissions, capture failure, browser
+      // support) — the Markdown payload must still make it out.
+    }
+  }
+  await clipboard.writeText(review.markdown);
+  return "markdown-only";
+}
+
+/**
+ * Copy only the composited PNG. Some paste targets prefer the text flavor
+ * of a combined clipboard item, so reviewers need a way to hand over just
+ * the image.
+ */
+export async function copyReviewImage(
+  renderPng: () => Promise<Blob>,
+  clipboard: ClipboardWriter = getClipboard(),
+): Promise<void> {
+  const clipboardItem = Reflect.get(globalThis, "ClipboardItem") as
+    typeof ClipboardItem | undefined;
+  if (!clipboard.write || !clipboardItem) {
+    throw new Error("Image clipboard is unavailable in this browser.");
+  }
+  const png = renderPng();
+  png.catch(() => undefined);
+  await clipboard.write([new clipboardItem({ "image/png": png })]);
 }
 
 /** Write one already-serialized representation to the Clipboard API. */
@@ -18,32 +74,6 @@ export async function writeReviewToClipboard(
   clipboard: ClipboardWriter = getClipboard(),
 ): Promise<void> {
   await clipboard.writeText(review[format]);
-}
-
-/** Serialize and copy the primary Markdown representation. */
-export async function copyMarkdown(
-  scene: SceneSnapshot,
-  pageContext: PageContext,
-  clipboard?: ClipboardWriter,
-): Promise<void> {
-  await writeReviewToClipboard(
-    serializeReview(scene, pageContext),
-    "markdown",
-    clipboard,
-  );
-}
-
-/** Serialize and copy the secondary versioned JSON representation. */
-export async function copyJson(
-  scene: SceneSnapshot,
-  pageContext: PageContext,
-  clipboard?: ClipboardWriter,
-): Promise<void> {
-  await writeReviewToClipboard(
-    serializeReview(scene, pageContext),
-    "json",
-    clipboard,
-  );
 }
 
 function getClipboard(): ClipboardWriter {

@@ -24,16 +24,16 @@ export const sceneStyles = `
 }
 
 .selection-box {
-  fill: rgb(23 105 224 / 6%);
-  stroke: #1769e0;
+  fill: var(--dv-accent-soft);
+  stroke: var(--dv-accent);
   stroke-width: 1;
   stroke-dasharray: 5 3;
   vector-effect: non-scaling-stroke;
 }
 
 .selection-handle {
-  fill: #ffffff;
-  stroke: #1769e0;
+  fill: var(--dv-bg-opaque);
+  stroke: var(--dv-accent);
   stroke-width: 2;
   pointer-events: all;
 }
@@ -57,12 +57,16 @@ export const sceneStyles = `
 }
 
 .marquee {
-  fill: rgb(23 105 224 / 12%);
+  fill: var(--dv-accent-soft);
   pointer-events: none;
 }
 
+.rotate-line {
+  stroke: var(--dv-accent);
+}
+
 .toolbar {
-  max-width: min(940px, calc(100vw - 72px));
+  max-width: min(1060px, calc(100vw - 72px));
   flex-wrap: wrap;
 }
 
@@ -72,58 +76,91 @@ export const sceneStyles = `
 .palette {
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 2px;
 }
 
 .scene-tools button,
 .history-tools button,
 .z-tools button {
+  position: relative;
+  display: grid;
+  width: 28px;
   height: 28px;
-  padding: 0 7px;
+  padding: 0;
+  place-items: center;
+  color: var(--dv-muted);
   white-space: nowrap;
 }
 
-.scene-tools button[aria-pressed='true'] {
-  background: var(--dv-selected);
-  color: var(--dv-selected-text);
-  font-weight: 700;
+.scene-tools button:hover,
+.history-tools button:hover,
+.z-tools button:hover {
+  background: var(--dv-accent-soft);
+  color: var(--dv-text);
 }
 
-.history-tools button,
-.z-tools button {
-  width: 29px;
-  padding: 0;
-  font-weight: 800;
+.root[data-mode='scene'] .scene-tools button[aria-pressed='true'] {
+  background: var(--dv-accent-soft);
+  color: var(--dv-selected-text);
+}
+
+/* Scene tools are reachable but visibly inactive while Comment mode owns
+   pointer input; clicking any of them switches to Draw. Text-bearing controls
+   (the Fill toggle) keep full opacity so text contrast stays WCAG-compliant. */
+.root[data-mode='element-select'] .scene-tools,
+.root[data-mode='element-select'] .palette button:not([data-fill-toggle]) {
+  opacity: 0.45;
+}
+
+.history-tools button:disabled,
+.z-tools button:disabled {
+  opacity: 0.38;
+  cursor: default;
+}
+
+.history-tools button:disabled:hover,
+.z-tools button:disabled:hover {
+  background: transparent;
+  color: var(--dv-muted);
+}
+
+.palette {
+  gap: 5px;
+  padding: 0 4px;
 }
 
 .palette button {
-  width: 20px;
-  height: 20px;
+  width: 14px;
+  height: 14px;
   padding: 0;
-  border: 2px solid var(--dv-bg);
+  border: 0;
   border-radius: 50%;
   box-shadow: 0 0 0 1px var(--dv-border);
+  transition: box-shadow var(--dv-motion-fast);
 }
 
 .palette button[aria-pressed='true'] {
-  box-shadow: 0 0 0 2px #1769e0;
+  box-shadow: 0 0 0 2px var(--dv-accent);
 }
 
 .palette button[data-fill-toggle='true'] {
   width: auto;
-  padding: 0 6px;
+  height: 22px;
+  padding: 0 7px;
   border: 1px solid var(--dv-border);
   border-radius: 5px;
-  background: var(--dv-bg);
+  background: transparent;
   box-shadow: none;
-  color: var(--dv-text);
+  color: var(--dv-muted);
   font-size: 11px;
 }
 
 .palette button[data-fill-toggle='true'][aria-pressed='true'] {
-  background: var(--dv-selected);
+  background: var(--dv-accent-soft);
+  border-color: transparent;
   box-shadow: none;
   color: var(--dv-selected-text);
+  font-weight: 600;
 }
 
 .inline-editor {
@@ -132,18 +169,20 @@ export const sceneStyles = `
   width: min(260px, calc(100vw - 24px));
   height: 36px;
   padding: 0 9px;
-  border: 2px solid #1769e0;
+  border: 2px solid var(--dv-accent);
   border-radius: 5px;
-  background: var(--dv-bg);
+  background: var(--dv-surface-raised);
   color: var(--dv-text);
-  font: 600 14px/1.2 ui-sans-serif, system-ui, sans-serif;
+  font: 600 14px/1.2 var(--dv-font-sans);
   pointer-events: auto;
 }
 
 .scene-status {
-  min-width: 72px;
+  min-width: 60px;
+  padding: 0 3px;
   color: var(--dv-muted);
-  font-size: 11px;
+  font-family: var(--dv-font-mono);
+  font-size: 10px;
   text-align: center;
   white-space: nowrap;
 }
@@ -164,10 +203,6 @@ export const sceneStyles = `
   .brand,
   .scene-status {
     display: none;
-  }
-
-  .scene-tools button {
-    padding: 0 6px;
   }
 }
 `;

@@ -1,5 +1,4 @@
 import AxeBuilder from "@axe-core/playwright";
-import { readFile } from "node:fs/promises";
 import { expect, type Locator, type Page, test } from "@playwright/test";
 
 test.beforeEach(async ({ context }) => {
@@ -32,31 +31,14 @@ test("annotates, edits, copies, reloads, and clears a mixed review", async ({
   await expect(pin).toHaveAttribute("data-annotation-number", "1");
   await expect(rectangle).toHaveAttribute("data-annotation-number", "2");
 
-  await host.getByRole("button", { name: "Open general notes" }).click();
-  await host
-    .getByRole("textbox", { name: "New general note" })
-    .fill("Check mobile spacing");
-  await host.getByRole("button", { name: "Add note" }).click();
-  await host.getByRole("button", { name: "Close general notes" }).click();
-
-  await host.getByRole("button", { name: "Copy review as Markdown" }).click();
-  await expect(host.locator(".command-status")).toHaveText("Markdown copied");
+  await host.getByRole("button", { name: "Copy review" }).click();
+  await expect(host.locator(".command-status")).toHaveText(
+    "Copied review + image",
+  );
   const markdown = await page.evaluate(() => navigator.clipboard.readText());
   expect(markdown).toContain("## Element comments");
   expect(markdown).toContain('### [1] "Disable until validation passes"');
   expect(markdown).toContain("### [2] Rectangle");
-  expect(markdown).toContain('- [3] "Check mobile spacing"');
-
-  await host.getByRole("button", { name: "Copy review as JSON" }).click();
-  await expect(host.locator(".command-status")).toHaveText("JSON copied");
-  const serialized = JSON.parse(
-    await page.evaluate(() => navigator.clipboard.readText()),
-  ) as { annotations: { type: string }[] };
-  expect(serialized.annotations.map(({ type }) => type)).toEqual([
-    "element-pin",
-    "rect",
-    "note",
-  ]);
 
   await pin.dispatchEvent("dblclick");
   const commentEditor = host.getByRole("textbox", { name: "Element comment" });
@@ -93,7 +75,7 @@ test("annotates, edits, copies, reloads, and clears a mixed review", async ({
   ).toHaveCount(0);
 });
 
-test("exports a composited PNG containing host pixels and annotation pixels", async ({
+test("one-press copy puts Markdown and a composited PNG on the clipboard", async ({
   page,
 }) => {
   let exportAssetRequests = 0;
@@ -176,26 +158,66 @@ test("exports a composited PNG containing host pixels and annotation pixels", as
   }));
   const submitBounds = await page.getByTestId("checkout-submit").boundingBox();
   if (!submitBounds) throw new Error("Checkout button was not visible.");
+  const gradientBounds = await page.getByTestId("gradient-cta").boundingBox();
+  if (!gradientBounds) throw new Error("Gradient button was not visible.");
   const pixelRatio = await page.evaluate(() => window.devicePixelRatio);
 
-  const downloadPromise = page.waitForEvent("download");
-  await host.getByRole("button", { name: "Export composited PNG" }).click();
-  const download = await downloadPromise;
+  await host.getByRole("button", { name: "Copy review" }).click();
+  await expect(host.locator(".command-status")).toHaveText(
+    "Copied review + image",
+  );
   expect(exportAssetRequests).toBe(0);
   await expect(page.locator("body")).toHaveAttribute(
     "data-capture-connections",
     "1",
   );
-  expect(download.suggestedFilename()).toBe("drawover-review.png");
-  const path = await download.path();
-  expect(path).not.toBeNull();
-  if (!path) return;
-  const png = await readFile(path);
+  const pngBase64 = await page.evaluate(async () => {
+    const items = await navigator.clipboard.read();
+    for (const item of items) {
+      if (!item.types.includes("image/png")) continue;
+      const blob = await item.getType("image/png");
+      const buffer = await blob.arrayBuffer();
+      let binary = "";
+      for (const byte of new Uint8Array(buffer)) {
+        binary += String.fromCharCode(byte);
+      }
+      return btoa(binary);
+    }
+    throw new Error("Clipboard has no image/png item.");
+  });
+  const clipboardText = await page.evaluate(() =>
+    navigator.clipboard.readText(),
+  );
+  expect(clipboardText).toContain("## Drawings");
+
+  // Flavor chips appear after the combined copy; each re-copies one flavor
+  // for paste targets that grabbed the wrong one.
+  await host.getByRole("button", { name: "Copy Markdown only" }).click();
+  await expect(host.locator(".command-status")).toHaveText("Markdown copied");
+  const textOnly = await page.evaluate(async () => {
+    const items = await navigator.clipboard.read();
+    return {
+      types: items.flatMap((item) => [...item.types]),
+      text: await navigator.clipboard.readText(),
+    };
+  });
+  expect(textOnly.types).not.toContain("image/png");
+  expect(textOnly.text).toContain("## Drawings");
+
+  await host.getByRole("button", { name: "Copy image only" }).click();
+  await expect(host.locator(".command-status")).toHaveText("Image copied");
+  const imageOnly = await page.evaluate(async () => {
+    const items = await navigator.clipboard.read();
+    return items.flatMap((item) => [...item.types]);
+  });
+  expect(imageOnly).toContain("image/png");
+  expect(imageOnly).not.toContain("text/plain");
+  const png = Buffer.from(pngBase64, "base64");
   expect([...png.subarray(0, 8)]).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
   expect(png.byteLength).toBeGreaterThan(2_000);
 
   const pixels = await page.evaluate(
-    async ({ background, dataUrl, host, ratio }) => {
+    async ({ background, dataUrl, gradient, host, ratio }) => {
       const image = new Image();
       image.src = dataUrl;
       await image.decode();
@@ -252,8 +274,29 @@ test("exports a composited PNG containing host pixels and annotation pixels", as
           }
         }
       }
+      // Tailwind v4 archetype: gradients with modern interpolation hints must
+      // survive capture, or white-on-amber CTAs render white-on-white.
+      let gradientPixels = 0;
+      for (let y = gradient.y; y <= gradient.y + gradient.height; y += 1) {
+        for (let x = gradient.x; x <= gradient.x + gradient.width; x += 1) {
+          const [red, green, blue] = sample(x, y);
+          if (
+            red !== undefined &&
+            green !== undefined &&
+            blue !== undefined &&
+            red >= 150 &&
+            red <= 215 &&
+            green >= 50 &&
+            green <= 105 &&
+            blue <= 40
+          ) {
+            gradientPixels += 1;
+          }
+        }
+      }
       return {
         annotationPixels,
+        gradientPixels,
         hostCenter: sample(host.x + host.width / 2, host.y + host.height / 2),
         hostPixels,
         page: sample(8, 150),
@@ -262,12 +305,14 @@ test("exports a composited PNG containing host pixels and annotation pixels", as
     {
       background: badgePoint,
       dataUrl: `data:image/png;base64,${png.toString("base64")}`,
+      gradient: gradientBounds,
       host: submitBounds,
       ratio: pixelRatio,
     },
   );
   expect(pixels.annotationPixels).toBeGreaterThan(20);
   expect(pixels.hostPixels).toBeGreaterThan(500);
+  expect(pixels.gradientPixels).toBeGreaterThan(500);
   expect(pixels.hostCenter.slice(0, 3)).toEqual([19, 111, 99]);
   expect(pixels.page.slice(0, 3)).toEqual([238, 241, 245]);
 });
@@ -285,6 +330,7 @@ test("keeps element pins anchored through layout and nested scrolling", async ({
   });
   await target.scrollIntoViewIfNeeded();
   await target.click();
+  await host.getByRole("button", { name: "Add comment" }).click();
   const dialog = host.getByRole("dialog", { name: "Add comment" });
   const dialogStart = await dialog.boundingBox();
   if (!dialogStart) throw new Error("Comment dialog was not visible.");
@@ -330,32 +376,43 @@ test("keeps element pins anchored through layout and nested scrolling", async ({
     .toBe(startX + 30);
 });
 
-test("keeps the complete overlay accessible under hostile host CSS", async ({
-  page,
-}) => {
-  await page.goto("/?fixture=hostile");
-  const host = page.locator("#drawover-root");
-  await host.locator(".trigger").click();
-  await page.getByTestId("checkout-submit").click();
-  await expect(host.getByRole("dialog", { name: "Add comment" })).toBeVisible();
-  await expect(
-    host.getByRole("textbox", { name: "Element comment" }),
-  ).toBeFocused();
+for (const theme of ["dark", "light"] as const) {
+  test(`keeps the complete overlay accessible under hostile host CSS (${theme} theme)`, async ({
+    page,
+  }) => {
+    await page.goto("/?fixture=hostile");
+    const host = page.locator("#drawover-root");
+    await host
+      .locator(".root")
+      .evaluate(
+        (root, next) => ((root as HTMLElement).dataset.theme = next),
+        theme,
+      );
+    await host.locator(".trigger").click();
+    await page.getByTestId("checkout-submit").click();
+    await host.getByRole("button", { name: "Add comment" }).click();
+    await expect(
+      host.getByRole("dialog", { name: "Add comment" }),
+    ).toBeVisible();
+    await expect(
+      host.getByRole("textbox", { name: "Element comment" }),
+    ).toBeFocused();
 
-  const results = await new AxeBuilder({ page })
-    .include("#drawover-root")
-    .analyze();
-  expect(
-    results.violations.map(({ id, nodes }) => ({
-      id,
-      nodes: nodes.map(({ failureSummary, html, target }) => ({
-        failureSummary,
-        html,
-        target,
+    const results = await new AxeBuilder({ page })
+      .include("#drawover-root")
+      .analyze();
+    expect(
+      results.violations.map(({ id, nodes }) => ({
+        id,
+        nodes: nodes.map(({ failureSummary, html, target }) => ({
+          failureSummary,
+          html,
+          target,
+        })),
       })),
-    })),
-  ).toEqual([]);
-});
+    ).toEqual([]);
+  });
+}
 
 async function addElementComment(
   page: Page,
@@ -363,6 +420,7 @@ async function addElementComment(
   comment: string,
 ): Promise<void> {
   await page.getByTestId("checkout-submit").click();
+  await host.getByRole("button", { name: "Add comment" }).click();
   const editor = host.getByRole("textbox", { name: "Element comment" });
   await editor.fill(comment);
   await host.getByRole("button", { name: "Save element comment" }).click();

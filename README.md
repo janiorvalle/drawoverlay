@@ -101,24 +101,34 @@ The default hotkey is `Alt+Shift+D`. `position` accepts `bottom-right`,
 - **Text** places editable freestanding text.
 - **Image** imports an image file. Pasting an image while Draw mode is active also
   inserts it. Images remain local as data URLs.
-- **Notes** manages page-level general notes.
 
-Annotations and notes are saved in `localStorage` using an origin-and-path key.
+Annotations are saved in `localStorage` using an origin-and-path key.
 They survive reloads, while **Clear** removes both the scene and its stored copy.
 Undo after reload starts from the restored scene instead of erasing it.
 
 ## Commands
 
-- **Copy** writes the primary Markdown review to the clipboard.
-- **JSON** writes the same versioned scene as JSON.
-- **PNG** downloads a composited full-page PNG with the visible annotations baked
-  in. The screenshot dependency is loaded only when this command runs. Capture
-  never fetches host-page assets, so externally hosted images or web fonts that
-  are not already data/blob resources, video, and host-page SVG may be omitted.
+- **Copy review** puts two representations on the clipboard in a single press:
+  the Markdown review as text, and a composited full-page PNG (your app with
+  the annotations baked in) as an image. Paste into a text field to get the
+  Markdown; paste into an image-accepting target (most agent chats) to get the
+  screenshot — one copy covers both halves of the payload, and the badge
+  numbers in the image match the Markdown headings. The screenshot dependency
+  loads only when this command runs, capture never fetches host-page assets
+  (externally hosted images, video, and host-page SVG may be omitted), and if
+  the browser refuses image clipboard the Markdown still copies with a
+  "Markdown only" status.
+
+How pasting works: the clipboard holds one item with both flavors, and the
+paste target picks exactly one — text fields take the Markdown, image-accepting
+targets take the PNG. You cannot force a target's choice, so after a copy the
+toolbar shows **Text** and **Image** chips that re-copy a single flavor: if an
+app grabbed the Markdown when you wanted the screenshot, click **Image** and
+paste again.
 
 Badge numbers use scene order and match the Markdown headings. The Markdown
-structure contains page metadata, element comments, a clearly marked proposed
-drawings section, and general notes:
+structure contains page metadata, element comments, and a clearly marked
+proposed drawings section:
 
 ```markdown
 # UI Review — /checkout (drawover)
@@ -130,14 +140,10 @@ drawings section, and general notes:
 ## Drawings (proposed UI — these elements do NOT exist yet)
 
 ### [2] Rectangle: "Home"
-
-## General notes
-
-- [3] "Check mobile spacing"
 ```
 
-Badge numbers follow scene order across all annotation types, including general
-notes, so the numbering in the copied output never has unexplained gaps.
+Badge numbers follow scene order across all annotation types, so the numbering
+in the copied output never has unexplained gaps.
 
 ## Keyboard
 

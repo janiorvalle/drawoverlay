@@ -25,6 +25,8 @@ import {
 import { resolveElementPinPosition } from "./anchoring.js";
 import { SceneRenderer } from "./renderer.js";
 import { sceneStyles } from "./styles.js";
+import { applyIcon } from "../theme/icons.js";
+import { ANNOTATION_COLORS } from "../theme/tokens.js";
 
 export type SceneTool = "arrow" | "image" | "rect" | "select" | "text";
 
@@ -49,6 +51,7 @@ interface MarqueeSession {
   start: DocumentPoint;
   current: DocumentRect;
   additive: boolean;
+  hadSelection: boolean;
 }
 
 interface MoveSession {
@@ -95,7 +98,10 @@ type PointerSession =
   | ResizeSession
   | RotateSession;
 
-const COLORS = ["#e5484d", "#1769e0", "#16805c", "#202936"] as const;
+const COLORS = ANNOTATION_COLORS;
+const APPLE_PLATFORM = /mac|iphone|ipad/i.test(globalThis.navigator.platform);
+const MOD_KEY = APPLE_PLATFORM ? "⌘" : "Ctrl+";
+const SHIFT_KEY = APPLE_PLATFORM ? "⇧" : "Shift+";
 
 export class SceneEditor {
   readonly #host: HTMLElement;
@@ -155,7 +161,7 @@ export class SceneEditor {
 
   #tool: SceneTool = "select";
   #color: (typeof COLORS)[number] = COLORS[0];
-  #fillEnabled = true;
+  #fillEnabled = false;
   #selectedIds = new Set<string>();
   #session: PointerSession | undefined;
   #inlineEditor: HTMLInputElement | undefined;
@@ -310,15 +316,17 @@ export class SceneEditor {
     group.className = "scene-tools";
     group.setAttribute("role", "group");
     group.setAttribute("aria-label", "Scene tools");
-    const definitions: readonly [SceneTool, string, string][] = [
-      ["select", "Select", "Select and move annotations"],
-      ["rect", "Rect", "Draw rectangle"],
-      ["arrow", "Arrow", "Draw arrow"],
-      ["text", "Text", "Insert text"],
-      ["image", "Image", "Insert image from file"],
+    const definitions: readonly [SceneTool, string, string, string][] = [
+      ["select", "select", "Select and move annotations", "Select"],
+      ["rect", "rect", "Draw rectangle", "Rectangle"],
+      ["arrow", "arrow", "Draw arrow", "Arrow"],
+      ["text", "text", "Insert text", "Text"],
+      ["image", "image", "Insert image from file", "Image"],
     ];
-    for (const [tool, text, label] of definitions) {
-      const button = createButton(text, label);
+    for (const [tool, iconName, label, tip] of definitions) {
+      const button = createButton("", label);
+      applyIcon(button, iconName);
+      button.dataset.tip = tip;
       button.dataset.tool = tool;
       button.addEventListener("click", () => {
         this.#ensureSceneMode();
@@ -340,13 +348,17 @@ export class SceneEditor {
     group.className = "history-tools";
     group.setAttribute("role", "group");
     group.setAttribute("aria-label", "History");
-    const undo = createButton("<", "Undo");
+    const undo = createButton("", "Undo");
+    applyIcon(undo, "undo");
     undo.dataset.command = "undo";
     undo.title = "Undo";
+    undo.dataset.tip = `Undo · ${MOD_KEY}Z`;
     undo.addEventListener("click", () => this.#undo());
-    const redo = createButton(">", "Redo");
+    const redo = createButton("", "Redo");
+    applyIcon(redo, "redo");
     redo.dataset.command = "redo";
     redo.title = "Redo";
+    redo.dataset.tip = `Redo · ${MOD_KEY}${SHIFT_KEY}Z`;
     redo.addEventListener("click", () => this.#redo());
     group.append(undo, redo);
     return group;
@@ -357,14 +369,21 @@ export class SceneEditor {
     group.className = "z-tools";
     group.setAttribute("role", "group");
     group.setAttribute("aria-label", "Layer order");
-    const definitions: readonly [ZOrderAction, string, string][] = [
-      ["back", "|<", "Send to back"],
-      ["backward", "<", "Send backward"],
-      ["forward", ">", "Bring forward"],
-      ["front", ">|", "Bring to front"],
+    const definitions: readonly [ZOrderAction, string, string, string][] = [
+      ["back", "send-back", "Send to back", `Send to back · ${SHIFT_KEY}[`],
+      ["backward", "send-backward", "Send backward", "Send backward · ["],
+      ["forward", "bring-forward", "Bring forward", "Bring forward · ]"],
+      [
+        "front",
+        "bring-front",
+        "Bring to front",
+        `Bring to front · ${SHIFT_KEY}]`,
+      ],
     ];
-    for (const [action, text, label] of definitions) {
-      const button = createButton(text, label);
+    for (const [action, iconName, label, tip] of definitions) {
+      const button = createButton("", label);
+      applyIcon(button, iconName);
+      button.dataset.tip = tip;
       button.dataset.zOrder = action;
       button.title = label;
       button.addEventListener("click", () => this.#reorder(action));
@@ -387,8 +406,9 @@ export class SceneEditor {
       group.append(button);
     }
     const fill = createButton("Fill", "Toggle rectangle fill");
+    fill.dataset.tip = "Toggle rectangle fill";
     fill.dataset.fillToggle = "true";
-    fill.setAttribute("aria-pressed", "true");
+    fill.setAttribute("aria-pressed", "false");
     fill.addEventListener("click", () => {
       this.#fillEnabled = !this.#fillEnabled;
       fill.setAttribute("aria-pressed", String(this.#fillEnabled));
@@ -418,6 +438,14 @@ export class SceneEditor {
     if (this.#host.dataset.drawoverMode !== "scene") {
       this.#shadow
         .querySelector<HTMLButtonElement>('button[data-mode="scene"]')
+        ?.click();
+    }
+  }
+
+  #ensureElementSelectMode(): void {
+    if (this.#host.dataset.drawoverMode !== "element-select") {
+      this.#shadow
+        .querySelector<HTMLButtonElement>('button[data-mode="element-select"]')
         ?.click();
     }
   }
@@ -528,6 +556,7 @@ export class SceneEditor {
       return;
     }
 
+    const hadSelection = this.#selectedIds.size > 0;
     if (!event.shiftKey) this.#selectedIds.clear();
     this.#session = {
       kind: "marquee",
@@ -535,6 +564,7 @@ export class SceneEditor {
       start: point,
       current: { ...point, width: 0, height: 0 },
       additive: event.shiftKey,
+      hadSelection,
     };
     this.#capture(event.pointerId);
     this.#render();
@@ -653,20 +683,32 @@ export class SceneEditor {
         if (isMeaningfulDraw(session.preview)) {
           this.#store.create(session.preview, `Create ${session.preview.type}`);
           this.#selectedIds = new Set([session.preview.id]);
+          // Match text/image tools: one shape per gesture, then back to
+          // Select so the next click manipulates instead of drawing again.
+          this.#setTool("select");
         }
         break;
       case "marquee": {
         const selected = this.#store
           .getSnapshot()
           .annotations.map(resolveElementPinPosition)
-          .filter(
-            (annotation) =>
-              annotation.type !== "note" &&
-              intersects(visualBounds(annotation), session.current),
+          .filter((annotation) =>
+            intersects(visualBounds(annotation), session.current),
           )
           .map(({ id }) => id);
         if (!session.additive) this.#selectedIds.clear();
         for (const id of selected) this.#selectedIds.add(id);
+        // A plain click on empty canvas with nothing selected means the user
+        // wants the page back: return pointer control to element targeting.
+        if (
+          selected.length === 0 &&
+          !session.additive &&
+          !session.hadSelection &&
+          session.current.width < 3 &&
+          session.current.height < 3
+        ) {
+          this.#ensureElementSelectMode();
+        }
         break;
       }
       case "move": {
@@ -1052,7 +1094,7 @@ export class SceneEditor {
     if (this.#selectedIds.size === 0) return;
     const snapshot = this.#store.getSnapshot();
     const reordered = reorderAnnotations(
-      snapshot.annotations.filter(({ type }) => type !== "note"),
+      snapshot.annotations,
       this.#selectedIds,
       action,
     );
@@ -1151,10 +1193,7 @@ export class SceneEditor {
 
   #pruneSelection(): void {
     const ids = new Set(
-      this.#store
-        .getSnapshot()
-        .annotations.filter(({ type }) => type !== "note")
-        .map(({ id }) => id),
+      this.#store.getSnapshot().annotations.map(({ id }) => id),
     );
     this.#selectedIds = new Set(
       [...this.#selectedIds].filter((id) => ids.has(id)),
@@ -1164,9 +1203,7 @@ export class SceneEditor {
   #render(): void {
     if (this.#destroyed) return;
     const snapshot = this.#store.getSnapshot();
-    const sceneAnnotations = snapshot.annotations.filter(
-      ({ type }) => type !== "note",
-    );
+    const sceneAnnotations = snapshot.annotations;
     if (this.#toolbar.hidden) {
       this.#anchorSignature = "";
       this.#renderer.render(

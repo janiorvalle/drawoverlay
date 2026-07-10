@@ -241,7 +241,7 @@ describe("SVG scene renderer", () => {
     expect(box?.getAttribute("height")).toBe("100");
   });
 
-  it("keeps badge numbers in scene order when z-order and notes differ", () => {
+  it("keeps badge numbers in scene order when z-order differs", () => {
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     const snapshot: SceneSnapshot = {
       version: 1,
@@ -262,14 +262,6 @@ describe("SVG scene renderer", () => {
             },
           },
           elementOffset: { x: 20, y: 20 },
-        },
-        {
-          id: "note",
-          type: "note",
-          geometry: { x: 0, y: 0, width: 0, height: 0 },
-          z: 0,
-          rotation: 0,
-          text: "Second in scene order",
         },
         {
           id: "rect",
@@ -300,7 +292,7 @@ describe("SVG scene renderer", () => {
       svg
         .querySelector('[data-annotation-id="rect"]')
         ?.getAttribute("data-annotation-number"),
-    ).toBe("3");
+    ).toBe("2");
     expect(
       svg.querySelector(
         '[data-annotation-id="pin"] [data-annotation-badge-label]',
@@ -310,6 +302,6 @@ describe("SVG scene renderer", () => {
       svg.querySelector(
         '[data-annotation-id="rect"] [data-annotation-badge-label]',
       )?.textContent,
-    ).toBe("3");
+    ).toBe("2");
   });
 });

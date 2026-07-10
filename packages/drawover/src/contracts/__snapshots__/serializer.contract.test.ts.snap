@@ -6,7 +6,7 @@ exports[`section 5 serializer contract fixtures > freeze the normative markdown 
 - URL: http://localhost:5173/checkout
 - Viewport: 1440×900 @2x
 - Captured: 2026-07-09T14:32:00Z
-- Annotations: 4 element comments, 2 drawings, 1 note
+- Annotations: 4 element comments, 2 drawings
 
 ## Element comments
 
@@ -40,10 +40,8 @@ exports[`section 5 serializer contract fixtures > freeze the normative markdown 
 
 ### [6] Text: "Log out"
 - Anchored near right edge of drawing [5], right-aligned
-- Intent: place alongside the proposed header
-
-## General notes
-- [7] "Overall spacing feels cramped on mobile widths""
+- Doc coords: 1320,18 → 1408,46
+- Intent: place alongside the proposed header"
 `;
 
 exports[`section 5 serializer contract fixtures > freeze versioned JSON that mirrors the same scene 1`] = `
@@ -263,19 +261,6 @@ exports[`section 5 serializer contract fixtures > freeze versioned JSON that mir
       "align": "right",
       "spatialDescription": "Anchored near right edge of drawing [5], right-aligned",
       "intent": "place alongside the proposed header"
-    },
-    {
-      "id": "annotation-7",
-      "type": "note",
-      "geometry": {
-        "x": 0,
-        "y": 0,
-        "width": 0,
-        "height": 0
-      },
-      "z": 0,
-      "rotation": 0,
-      "text": "Overall spacing feels cramped on mobile widths"
     }
   ]
 }"

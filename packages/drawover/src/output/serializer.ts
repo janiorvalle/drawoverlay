@@ -11,6 +11,7 @@ import type {
   TextAnnotation,
 } from "../contracts/index.js";
 import { viewportRectToDocument } from "../coordinates.js";
+import { isGeneratedId } from "../targeting/selectors.js";
 
 const DRAWING_TYPES = new Set<Annotation["type"]>([
   "rect",
@@ -35,10 +36,9 @@ export const serializeReview: Serializer = (
   }));
   const elementPins = numbered.filter(isElementPin);
   const drawings = numbered.filter(isDrawing);
-  const notes = numbered.filter(({ annotation }) => annotation.type === "note");
 
   return {
-    markdown: serializeMarkdown(pageContext, elementPins, drawings, notes),
+    markdown: serializeMarkdown(pageContext, elementPins, drawings),
     json: JSON.stringify(
       {
         drawoverVersion: scene.version,
@@ -55,7 +55,6 @@ function serializeMarkdown(
   page: PageContext,
   elementPins: readonly NumberedAnnotation[],
   drawings: readonly NumberedAnnotation[],
-  notes: readonly NumberedAnnotation[],
 ): string {
   const lines = [
     `# UI Review — ${oneLine(page.pathname)} (drawover)`,
@@ -63,7 +62,7 @@ function serializeMarkdown(
     `- URL: ${oneLine(page.url)}`,
     `- Viewport: ${formatNumber(page.viewport.width)}×${formatNumber(page.viewport.height)} @${formatNumber(page.viewport.devicePixelRatio)}x`,
     `- Captured: ${oneLine(page.capturedAt)}`,
-    `- Annotations: ${countLabel(elementPins.length, "element comment")}, ${countLabel(drawings.length, "drawing")}, ${countLabel(notes.length, "note")}`,
+    `- Annotations: ${countLabel(elementPins.length, "element comment")}, ${countLabel(drawings.length, "drawing")}`,
     "",
     "## Element comments",
   ];
@@ -75,14 +74,7 @@ function serializeMarkdown(
 
   lines.push("", "## Drawings (proposed UI — these elements do NOT exist yet)");
   for (const item of drawings) {
-    lines.push("", ...formatDrawing(item.annotation, item.number));
-  }
-
-  lines.push("", "## General notes");
-  for (const { annotation, number } of notes) {
-    if (annotation.type === "note") {
-      lines.push(`- [${String(number)}] "${quoted(annotation.text)}"`);
-    }
+    lines.push("", ...formatDrawing(item.annotation, item.number, drawings));
   }
 
   return lines.join("\n");
@@ -114,26 +106,37 @@ function formatElementPin(pin: ElementPinAnnotation, number: number): string[] {
   return lines;
 }
 
-function formatDrawing(annotation: Annotation, number: number): string[] {
+function formatDrawing(
+  annotation: Annotation,
+  number: number,
+  siblings: readonly NumberedAnnotation[],
+): string[] {
   switch (annotation.type) {
     case "rect":
-      return formatRectangle(annotation, number);
+      return formatRectangle(annotation, number, siblings);
     case "arrow":
-      return formatArrow(annotation, number);
+      return formatArrow(annotation, number, siblings);
     case "text":
-      return formatText(annotation, number);
+      return formatText(annotation, number, siblings);
     case "image":
-      return formatImage(annotation, number);
+      return formatImage(annotation, number, siblings);
     case "element-pin":
-    case "note":
       throw new Error(`Annotation ${annotation.id} is not a drawing.`);
   }
 }
 
-function formatRectangle(annotation: RectAnnotation, number: number): string[] {
+function formatRectangle(
+  annotation: RectAnnotation,
+  number: number,
+  siblings: readonly NumberedAnnotation[],
+): string[] {
   const label = annotation.label ? `: "${quoted(annotation.label)}"` : "";
   const lines = [`### [${formatNumber(number)}] Rectangle${label}`];
-  appendSpatialThenCoordinates(lines, annotation, spatialNarration(annotation));
+  appendSpatialThenCoordinates(
+    lines,
+    annotation,
+    spatialNarration(annotation, number, siblings),
+  );
   if (annotation.label) {
     lines.push(
       `- Contains label text: "${quoted(annotation.label)}"${annotation.labelAlign ? ` (${annotation.labelAlign} side)` : ""}`,
@@ -143,9 +146,13 @@ function formatRectangle(annotation: RectAnnotation, number: number): string[] {
   return lines;
 }
 
-function formatArrow(annotation: ArrowAnnotation, number: number): string[] {
+function formatArrow(
+  annotation: ArrowAnnotation,
+  number: number,
+  siblings: readonly NumberedAnnotation[],
+): string[] {
   const lines = [`### [${formatNumber(number)}] Arrow`];
-  const spatial = spatialNarration(annotation);
+  const spatial = spatialNarration(annotation, number, siblings);
   if (spatial) {
     lines.push(`- ${oneLine(spatial)}`);
   }
@@ -156,26 +163,37 @@ function formatArrow(annotation: ArrowAnnotation, number: number): string[] {
   return lines;
 }
 
-function formatText(annotation: TextAnnotation, number: number): string[] {
+function formatText(
+  annotation: TextAnnotation,
+  number: number,
+  siblings: readonly NumberedAnnotation[],
+): string[] {
   const lines = [
     `### [${formatNumber(number)}] Text: "${quoted(annotation.text)}"`,
   ];
-  const spatial = spatialNarration(annotation);
+  const spatial = spatialNarration(annotation, number, siblings);
   if (spatial) {
     lines.push(`- ${oneLine(spatial)}`);
-  } else {
-    lines.push(`- Doc coords: ${formatRect(annotation.geometry)}`);
   }
+  lines.push(`- Doc coords: ${formatRect(annotation.geometry)}`);
   if (annotation.intent) lines.push(`- Intent: ${oneLine(annotation.intent)}`);
   appendRotation(lines, annotation.rotation);
   return lines;
 }
 
-function formatImage(annotation: ImageAnnotation, number: number): string[] {
+function formatImage(
+  annotation: ImageAnnotation,
+  number: number,
+  siblings: readonly NumberedAnnotation[],
+): string[] {
   const lines = [
     `### [${formatNumber(number)}] Image: "${quoted(annotation.alt)}"`,
   ];
-  appendSpatialThenCoordinates(lines, annotation, spatialNarration(annotation));
+  appendSpatialThenCoordinates(
+    lines,
+    annotation,
+    spatialNarration(annotation, number, siblings),
+  );
   if (annotation.opacity !== 1) {
     lines.push(`- Opacity: ${formatNumber(annotation.opacity)}`);
   }
@@ -194,28 +212,106 @@ function appendSpatialThenCoordinates(
   lines.push(`- Doc coords: ${formatRect(annotation.geometry)}`);
 }
 
+const GENERIC_MOUNT_IDS = new Set(["root", "app", "__next", "__nuxt"]);
+
 function spatialNarration(
   annotation:
     RectAnnotation | ArrowAnnotation | TextAnnotation | ImageAnnotation,
+  number: number,
+  siblings: readonly NumberedAnnotation[],
 ): string | undefined {
   if (annotation.spatialDescription) return annotation.spatialDescription;
 
+  return (
+    drawingRelation(annotation, number, siblings) ??
+    nearestElementRelation(annotation) ??
+    pageRegion(annotation)
+  );
+}
+
+/** Relate a drawing to a sibling drawing it mostly sits within. */
+function drawingRelation(
+  annotation:
+    RectAnnotation | ArrowAnnotation | TextAnnotation | ImageAnnotation,
+  number: number,
+  siblings: readonly NumberedAnnotation[],
+): string | undefined {
+  const self = annotation.geometry;
+  const selfArea = Math.max(self.width, 1) * Math.max(self.height, 1);
+  for (const sibling of siblings) {
+    if (sibling.number === number) continue;
+    const other = sibling.annotation;
+    if (other.type !== "rect" && other.type !== "image") continue;
+    const bounds = other.geometry;
+    const overlapWidth = Math.max(
+      0,
+      Math.min(self.x + self.width, bounds.x + bounds.width) -
+        Math.max(self.x, bounds.x),
+    );
+    const overlapHeight = Math.max(
+      0,
+      Math.min(self.y + self.height, bounds.y + bounds.height) -
+        Math.max(self.y, bounds.y),
+    );
+    const ratio =
+      (Math.max(overlapWidth, self.width === 0 ? 1 : 0) *
+        Math.max(overlapHeight, self.height === 0 ? 1 : 0)) /
+      selfArea;
+    if (ratio >= 1) {
+      return `Inside drawing [${formatNumber(sibling.number)}]`;
+    }
+    if (ratio >= 0.5) {
+      return `Mostly inside drawing [${formatNumber(sibling.number)}], overflowing it`;
+    }
+  }
+  return undefined;
+}
+
+function nearestElementRelation(
+  annotation:
+    RectAnnotation | ArrowAnnotation | TextAnnotation | ImageAnnotation,
+): string | undefined {
   const currentDocument = Reflect.get(globalThis, "document") as
     Document | undefined;
   if (!currentDocument) return undefined;
 
+  const pageArea =
+    currentDocument.documentElement.scrollWidth *
+    currentDocument.documentElement.scrollHeight;
   const candidates = currentDocument.querySelectorAll<HTMLElement>(
-    "[data-testid], [id], main, nav, header, footer, form, aside, section[aria-label]",
+    "[data-testid], [id], [aria-label], main, nav, header, footer, form, aside",
   );
   let nearest:
     | { element: HTMLElement; rect: ReturnType<typeof viewportRectToDocument> }
     | undefined;
   let nearestDistance = Number.POSITIVE_INFINITY;
 
+  const semanticTags = new Set([
+    "main",
+    "nav",
+    "header",
+    "footer",
+    "form",
+    "aside",
+  ]);
   for (const element of candidates) {
     if (element.dataset.drawoverRuntime) continue;
+    if (isGenericMount(element)) continue;
+    // An element whose only hook is an auto-generated id would narrate as a
+    // bare tag; it is not a useful reference.
+    if (
+      element.id &&
+      isGeneratedId(element.id) &&
+      !element.dataset.testid &&
+      !element.getAttribute("aria-label")?.trim() &&
+      !semanticTags.has(element.tagName.toLowerCase())
+    ) {
+      continue;
+    }
     const rect = viewportRectToDocument(element.getBoundingClientRect());
     if (rect.width === 0 && rect.height === 0) continue;
+    // Page-scale wrappers "overlap" everything and describe nothing.
+    if (pageArea > 0 && rect.width * rect.height >= pageArea * 0.5) continue;
     const distance = rectDistance(annotation.geometry, rect);
     if (distance < nearestDistance) {
       nearest = { element, rect };
@@ -232,6 +328,39 @@ function spatialNarration(
   if (drawing.x + drawing.width <= target.x) return `Left of ${reference}`;
   if (drawing.x >= target.x + target.width) return `Right of ${reference}`;
   return `Overlapping ${reference}`;
+}
+
+function isGenericMount(element: HTMLElement): boolean {
+  const tag = element.tagName.toLowerCase();
+  if (tag === "html" || tag === "body") return true;
+  if (!element.id) return false;
+  return GENERIC_MOUNT_IDS.has(element.id.toLowerCase());
+}
+
+/** Universal fallback: locate the drawing by page region. Works on any DOM. */
+function pageRegion(
+  annotation:
+    RectAnnotation | ArrowAnnotation | TextAnnotation | ImageAnnotation,
+): string | undefined {
+  const currentDocument = Reflect.get(globalThis, "document") as
+    Document | undefined;
+  if (!currentDocument) return undefined;
+  const pageWidth = currentDocument.documentElement.scrollWidth;
+  const pageHeight = currentDocument.documentElement.scrollHeight;
+  if (pageWidth <= 0 || pageHeight <= 0) return undefined;
+
+  const centerX = annotation.geometry.x + annotation.geometry.width / 2;
+  const centerY = annotation.geometry.y + annotation.geometry.height / 2;
+  const column =
+    centerX < pageWidth / 3
+      ? "left"
+      : centerX > (pageWidth * 2) / 3
+        ? "right"
+        : "center";
+  const percentDown = Math.round(
+    Math.min(100, Math.max(0, (centerY / pageHeight) * 100)),
+  );
+  return `In the ${column} of the page, about ${formatNumber(percentDown)}% down`;
 }
 
 function rectDistance(
@@ -255,7 +384,11 @@ function formatLiveElement(element: HTMLElement): string {
   const tag = element.tagName.toLowerCase();
   const testId = element.dataset.testid;
   if (testId) return `<${tag} data-testid="${attributeValue(testId)}">`;
-  if (element.id) return `<${tag} id="${attributeValue(element.id)}">`;
+  if (element.id && !isGeneratedId(element.id)) {
+    return `<${tag} id="${attributeValue(element.id)}">`;
+  }
+  const ariaLabel = element.getAttribute("aria-label")?.trim();
+  if (ariaLabel) return `<${tag} aria-label="${attributeValue(ariaLabel)}">`;
   return `<${tag}>`;
 }
 
@@ -298,7 +431,13 @@ function formatRect(rect: {
 }
 
 function formatPoint(point: { x: number; y: number }): string {
-  return `${formatNumber(point.x)},${formatNumber(point.y)}`;
+  return `${formatCoord(point.x)},${formatCoord(point.y)}`;
+}
+
+/** Coordinates round to whole CSS pixels; sub-pixel noise helps no agent. */
+function formatCoord(value: number): string {
+  const rounded = Math.round(value);
+  return String(Object.is(rounded, -0) ? 0 : rounded);
 }
 
 function formatNumber(value: number): string {
