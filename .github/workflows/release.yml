@@ -6,8 +6,8 @@ on:
       - "v*"
 
 permissions:
-  contents: read
-  id-token: write
+  contents: read # checkout
+  id-token: write # npm trusted publishing exchanges the OIDC token
 
 concurrency:
   group: release
@@ -28,7 +28,8 @@ jobs:
       - uses: ./.github/actions/setup
       - name: Confirm tokenless trusted publishing
         run: test -z "${NODE_AUTH_TOKEN:-}" && test -z "${NPM_TOKEN:-}"
-      - run: npm install --global npm@11.13.0
+      # Trusted publishing needs a newer npm than the runner ships; pinned.
+      - run: npm install --global npm@11.13.0 # zizmor: ignore[adhoc-packages]
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm verify
       - name: Publish with trusted provenance

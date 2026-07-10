@@ -12,6 +12,10 @@ on:
 
 permissions: {}
 
+concurrency:
+  group: version-pr
+  cancel-in-progress: true
+
 jobs:
   version-pr:
     name: Open or update the version PR
@@ -19,12 +23,12 @@ jobs:
     timeout-minutes: 10
     if: github.repository == 'janiorvalle/drawover'
     permissions:
-      contents: write
-      pull-requests: write
+      contents: write # the changesets action pushes the version branch
+      pull-requests: write # ...and opens the version PR
     steps:
       # The changesets action pushes the version branch with the persisted
-      # checkout credentials; scope stays contents/PR-write on this job only.
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0 # zizmor: ignore[artipacked]
+      # checkout credentials, hence no persist-credentials: false.
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - uses: ./.github/actions/setup
       - name: Create or update the version PR
         uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0

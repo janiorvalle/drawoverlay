@@ -13,6 +13,10 @@ on:
 
 permissions: {}
 
+concurrency:
+  group: scorecard
+  cancel-in-progress: true
+
 jobs:
   analysis:
     name: Scorecard analysis
@@ -20,10 +24,9 @@ jobs:
     timeout-minutes: 15
     if: github.repository == 'janiorvalle/drawover'
     permissions:
-      contents: read
-      # Required to upload SARIF to code scanning and publish results.
-      security-events: write
-      id-token: write
+      contents: read # checkout
+      security-events: write # SARIF upload to code scanning
+      id-token: write # publishing results to the OpenSSF API
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
