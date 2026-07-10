@@ -29,6 +29,8 @@ interface CreateShellOptions extends DrawoverOptions {
   onClear: () => void;
   /** Copies the review; resolves with the status message to display. */
   onCopy: () => Promise<string>;
+  /** Copies one flavor for paste targets that prefer the other. */
+  onCopyFlavor: (flavor: "markdown" | "image") => Promise<string>;
   onDestroy: () => void;
 }
 
@@ -102,6 +104,16 @@ export function createShell(options: CreateShellOptions): DrawoverInstance {
   copyButton.className = "command";
   copyButton.dataset.command = "copy-review";
   copyButton.dataset.tip = "Copy review · Markdown + PNG";
+  const flavorChips = document.createElement("span");
+  flavorChips.className = "flavor-chips";
+  flavorChips.hidden = true;
+  const textChip = button("Text", "Copy Markdown only");
+  textChip.className = "flavor-chip";
+  textChip.dataset.tip = "Re-copy just the Markdown";
+  const imageChip = button("Image", "Copy image only");
+  imageChip.className = "flavor-chip";
+  imageChip.dataset.tip = "Re-copy just the PNG";
+  flavorChips.append(textChip, imageChip);
   const clearButton = button("", "Clear annotations");
   applyIcon(clearButton, "trash");
   clearButton.className = "command";
@@ -122,6 +134,7 @@ export function createShell(options: CreateShellOptions): DrawoverInstance {
     copyButton,
     clearButton,
     commandStatus,
+    flavorChips,
     separator(),
     closeButton,
   );
@@ -212,9 +225,23 @@ export function createShell(options: CreateShellOptions): DrawoverInstance {
   inspectButton.addEventListener("click", () => setMode("element-select"));
   sceneButton.addEventListener("click", () => setMode("scene"));
   copyButton.addEventListener("click", () => {
-    void runCommand(copyButton, "Copying...", requestCopy).catch(
-      () => undefined,
-    );
+    void runCommand(copyButton, "Copying...", requestCopy)
+      .then(() => {
+        // Some paste targets only take one flavor of the combined item;
+        // reveal one-click re-copies for the other flavor.
+        flavorChips.hidden = false;
+      })
+      .catch(() => undefined);
+  });
+  textChip.addEventListener("click", () => {
+    void runCommand(textChip, "Copying...", async () =>
+      options.onCopyFlavor("markdown"),
+    ).catch(() => undefined);
+  });
+  imageChip.addEventListener("click", () => {
+    void runCommand(imageChip, "Copying...", async () =>
+      options.onCopyFlavor("image"),
+    ).catch(() => undefined);
   });
   clearButton.addEventListener("click", requestClear);
   document.addEventListener("keydown", onKeydown);

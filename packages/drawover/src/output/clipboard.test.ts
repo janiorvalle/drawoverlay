@@ -4,7 +4,11 @@ import {
   section5PageContext,
   section5Scene,
 } from "../contracts/fixtures/section5.fixture.js";
-import { copyReview, writeReviewToClipboard } from "./clipboard.js";
+import {
+  copyReview,
+  copyReviewImage,
+  writeReviewToClipboard,
+} from "./clipboard.js";
 import { serializeReview } from "./serializer.js";
 
 afterEach(() => {
@@ -76,6 +80,31 @@ describe("clipboard output", () => {
 
     expect(result).toBe("markdown-only");
     expect(writeText).toHaveBeenCalledWith(section5Expected.markdown);
+  });
+
+  it("copies the image flavor alone for text-preferring paste targets", async () => {
+    vi.stubGlobal("ClipboardItem", FakeClipboardItem);
+    const write = vi
+      .fn<(items: ClipboardItem[]) => Promise<void>>()
+      .mockResolvedValue();
+    const png = new Blob(["png-bytes"], { type: "image/png" });
+
+    await copyReviewImage(() => Promise.resolve(png), {
+      write,
+      writeText: vi.fn(),
+    });
+
+    const item = write.mock.calls[0]?.[0][0] as unknown as FakeClipboardItem;
+    expect(Object.keys(item.entries)).toEqual(["image/png"]);
+    await expect(item.entries["image/png"] as Promise<Blob>).resolves.toBe(png);
+  });
+
+  it("reports when image clipboard is unsupported", async () => {
+    await expect(
+      copyReviewImage(() => Promise.resolve(new Blob()), {
+        writeText: vi.fn(),
+      }),
+    ).rejects.toThrow("Image clipboard is unavailable in this browser.");
   });
 
   it("selects an already-serialized representation", async () => {

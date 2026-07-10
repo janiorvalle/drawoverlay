@@ -187,6 +187,29 @@ test("one-press copy puts Markdown and a composited PNG on the clipboard", async
     navigator.clipboard.readText(),
   );
   expect(clipboardText).toContain("## Drawings");
+
+  // Flavor chips appear after the combined copy; each re-copies one flavor
+  // for paste targets that grabbed the wrong one.
+  await host.getByRole("button", { name: "Copy Markdown only" }).click();
+  await expect(host.locator(".command-status")).toHaveText("Markdown copied");
+  const textOnly = await page.evaluate(async () => {
+    const items = await navigator.clipboard.read();
+    return {
+      types: items.flatMap((item) => [...item.types]),
+      text: await navigator.clipboard.readText(),
+    };
+  });
+  expect(textOnly.types).not.toContain("image/png");
+  expect(textOnly.text).toContain("## Drawings");
+
+  await host.getByRole("button", { name: "Copy image only" }).click();
+  await expect(host.locator(".command-status")).toHaveText("Image copied");
+  const imageOnly = await page.evaluate(async () => {
+    const items = await navigator.clipboard.read();
+    return items.flatMap((item) => [...item.types]);
+  });
+  expect(imageOnly).toContain("image/png");
+  expect(imageOnly).not.toContain("text/plain");
   const png = Buffer.from(pngBase64, "base64");
   expect([...png.subarray(0, 8)]).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
   expect(png.byteLength).toBeGreaterThan(2_000);

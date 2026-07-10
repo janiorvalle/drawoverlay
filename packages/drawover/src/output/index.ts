@@ -1,4 +1,8 @@
-export { copyReview, writeReviewToClipboard } from "./clipboard.js";
+export {
+  copyReview,
+  copyReviewImage,
+  writeReviewToClipboard,
+} from "./clipboard.js";
 export type {
   ClipboardFormat,
   ClipboardWriter,

@@ -119,6 +119,13 @@ Undo after reload starts from the restored scene instead of erasing it.
   the browser refuses image clipboard the Markdown still copies with a
   "Markdown only" status.
 
+How pasting works: the clipboard holds one item with both flavors, and the
+paste target picks exactly one — text fields take the Markdown, image-accepting
+targets take the PNG. You cannot force a target's choice, so after a copy the
+toolbar shows **Text** and **Image** chips that re-copy a single flavor: if an
+app grabbed the Markdown when you wanted the screenshot, click **Image** and
+paste again.
+
 Badge numbers use scene order and match the Markdown headings. The Markdown
 structure contains page metadata, element comments, and a clearly marked
 proposed drawings section:

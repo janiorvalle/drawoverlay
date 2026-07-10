@@ -258,6 +258,27 @@ button svg {
   bottom: auto;
 }
 
+.flavor-chips {
+  display: flex;
+  gap: 3px;
+}
+
+.flavor-chip {
+  position: relative;
+  height: 22px;
+  padding: 0 8px;
+  border: 1px solid var(--dv-border);
+  border-radius: 5px;
+  color: var(--dv-muted);
+  font-family: var(--dv-font-mono);
+  font-size: 10px;
+}
+
+.flavor-chip:hover {
+  background: var(--dv-accent-soft);
+  color: var(--dv-text);
+}
+
 .separator {
   width: 1px;
   height: 18px;

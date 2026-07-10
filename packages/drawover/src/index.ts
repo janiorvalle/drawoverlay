@@ -13,6 +13,7 @@ import {
 import { createSceneStore } from "./scene/store.js";
 import {
   copyReview as copySceneReview,
+  copyReviewImage as copySceneReviewImage,
   exportCompositedPng as exportScenePng,
   serializeReview,
 } from "./output/index.js";
@@ -83,6 +84,23 @@ export function init(options: DrawoverOptions = {}): DrawoverInstance {
       return result === "markdown+png"
         ? "Copied review + image"
         : "Copied review (Markdown only)";
+    },
+    onCopyFlavor: async (flavor) => {
+      if (flavor === "markdown") {
+        const review = serializeReview(
+          store.getSnapshot(),
+          capturePageContext(),
+        );
+        await navigator.clipboard.writeText(review.markdown);
+        return "Markdown copied";
+      }
+      await copySceneReviewImage(() => {
+        if (!sceneLayer) {
+          throw new Error("The annotation scene is unavailable.");
+        }
+        return exportScenePng({ annotationSvg: sceneLayer });
+      });
+      return "Image copied";
     },
     onDestroy: () => {
       persistence.destroy();
