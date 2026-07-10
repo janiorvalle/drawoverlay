@@ -61,9 +61,11 @@ const LIBRARY_INTERNAL_NAMES = new Set([
   "ForwardRef",
   "Fragment",
   "Portal",
+  "Presence",
   "Provider",
   "Root",
   "Slot",
+  "SlotClone",
   "Suspense",
 ]);
 

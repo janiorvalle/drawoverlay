@@ -152,6 +152,18 @@ export function createElementTargetingController(
     renderHighlight(target);
   };
 
+  // Frameworks act on pointerdown/mouseup as often as on click (Radix tabs
+  // activate on pointerdown), so reviewing must silence the whole trusted
+  // pointer sequence over page elements. preventDefault is deliberately NOT
+  // called for the interim events: cancelling pointerdown would suppress the
+  // browser's synthesized click and break selection itself.
+  const onPointerSequence = (event: Event): void => {
+    if (!event.isTrusted || !isActive()) return;
+    const pointer = event as MouseEvent;
+    if (!targetAt(pointer.clientX, pointer.clientY)) return;
+    event.stopPropagation();
+  };
+
   const onClick = (event: MouseEvent): void => {
     // Programmatic clicks (shell mode switches, host-app frameworks) are
     // never element picks; only trusted user clicks select or get consumed.
@@ -213,6 +225,10 @@ export function createElementTargetingController(
   };
 
   document.addEventListener("pointermove", onPointerMove, { passive: true });
+  document.addEventListener("pointerdown", onPointerSequence, true);
+  document.addEventListener("mousedown", onPointerSequence, true);
+  document.addEventListener("pointerup", onPointerSequence, true);
+  document.addEventListener("mouseup", onPointerSequence, true);
   document.addEventListener("click", onClick, true);
   document.addEventListener("click", onShellStateChange);
   document.addEventListener("keydown", onKeydown);
@@ -224,6 +240,10 @@ export function createElementTargetingController(
       if (destroyed) return;
       destroyed = true;
       document.removeEventListener("pointermove", onPointerMove);
+      document.removeEventListener("pointerdown", onPointerSequence, true);
+      document.removeEventListener("mousedown", onPointerSequence, true);
+      document.removeEventListener("pointerup", onPointerSequence, true);
+      document.removeEventListener("mouseup", onPointerSequence, true);
       document.removeEventListener("click", onClick, true);
       document.removeEventListener("click", onShellStateChange);
       document.removeEventListener("keydown", onKeydown);

@@ -178,10 +178,14 @@ if (vueFixture) {
   });
 }
 
-document.querySelector("#pass-through")?.addEventListener("click", (event) => {
-  const count = (event.currentTarget as HTMLElement).querySelector("span");
-  if (count) count.textContent = String(Number(count.textContent) + 1);
-});
+// Radix-style components activate on pointerdown, not click; the fixture
+// counts both so tests can prove neither reaches the host while reviewing.
+for (const type of ["click", "pointerdown"]) {
+  document.querySelector("#pass-through")?.addEventListener(type, (event) => {
+    const count = (event.currentTarget as HTMLElement).querySelector("span");
+    if (count) count.textContent = String(Number(count.textContent) + 1);
+  });
+}
 
 if (import.meta.env.DEV || import.meta.env.VITE_DRAWOVER === "true") {
   void import("./drawover-dev.js").then(({ installDrawoverDev }) =>
