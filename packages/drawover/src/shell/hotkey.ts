@@ -34,10 +34,23 @@ export function matchesHotkey(
   hotkey: ParsedHotkey,
 ): boolean {
   return (
-    event.key.toLowerCase() === hotkey.key &&
+    matchesKey(event, hotkey.key) &&
     event.altKey === hotkey.alt &&
     event.ctrlKey === hotkey.ctrl &&
     event.metaKey === hotkey.meta &&
     event.shiftKey === hotkey.shift
   );
+}
+
+/**
+ * macOS Option combinations change event.key to the composed character
+ * (Option+Shift+D reports "Î"), so the physical key code must match too or
+ * the default hotkey never fires on Mac keyboards.
+ */
+function matchesKey(event: KeyboardEvent, key: string): boolean {
+  if (event.key.toLowerCase() === key) return true;
+  const code = event.code.toLowerCase();
+  if (/^[a-z]$/.test(key)) return code === `key${key}`;
+  if (/^[0-9]$/.test(key)) return code === `digit${key}`;
+  return false;
 }

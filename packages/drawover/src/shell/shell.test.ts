@@ -38,6 +38,18 @@ describe("shell", () => {
       new KeyboardEvent("keydown", { key: "d", altKey: true, shiftKey: true }),
     );
     expect(toolbar?.hidden).toBe(true);
+
+    // macOS reports the composed character for Option combinations
+    // (Option+Shift+D is "Î"); the physical key code must still match.
+    document.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Î",
+        code: "KeyD",
+        altKey: true,
+        shiftKey: true,
+      }),
+    );
+    expect(toolbar?.hidden).toBe(false);
     instance.destroy();
   });
 
