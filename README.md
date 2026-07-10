@@ -133,8 +133,11 @@ drawings section, and general notes:
 
 ## General notes
 
-- "Check mobile spacing"
+- [3] "Check mobile spacing"
 ```
+
+Badge numbers follow scene order across all annotation types, including general
+notes, so the numbering in the copied output never has unexplained gaps.
 
 ## Keyboard
 

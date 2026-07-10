@@ -45,7 +45,7 @@ test("annotates, edits, copies, reloads, and clears a mixed review", async ({
   expect(markdown).toContain("## Element comments");
   expect(markdown).toContain('### [1] "Disable until validation passes"');
   expect(markdown).toContain("### [2] Rectangle");
-  expect(markdown).toContain('- "Check mobile spacing"');
+  expect(markdown).toContain('- [3] "Check mobile spacing"');
 
   await host.getByRole("button", { name: "Copy review as JSON" }).click();
   await expect(host.locator(".command-status")).toHaveText("JSON copied");

@@ -178,5 +178,5 @@ exports[`output serializer > snapshots every annotation discriminator and page c
 - Intent: Use as the proposed page heading
 
 ## General notes
-- "Keep the \\"quiet\\" treatment\\non narrow screens""
+- [1] "Keep the \\"quiet\\" treatment\\non narrow screens""
 `;

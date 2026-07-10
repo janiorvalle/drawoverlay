@@ -38,7 +38,7 @@ describe("output serializer", () => {
       markdown.indexOf("### [2]"),
     );
     expect(markdown).toContain(
-      '## General notes\n- "Keep the \\"quiet\\" treatment\\non narrow screens"',
+      '## General notes\n- [1] "Keep the \\"quiet\\" treatment\\non narrow screens"',
     );
     expect(markdown).not.toContain("### [1]");
   });

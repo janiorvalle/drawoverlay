@@ -193,6 +193,6 @@ export const section5Expected = {
 - Intent: place alongside the proposed header
 
 ## General notes
-- "Overall spacing feels cramped on mobile widths"`,
+- [7] "Overall spacing feels cramped on mobile widths"`,
   json: JSON.stringify(jsonPayload, null, 2),
 } as const satisfies SerializedReview;

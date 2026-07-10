@@ -43,7 +43,7 @@ exports[`section 5 serializer contract fixtures > freeze the normative markdown 
 - Intent: place alongside the proposed header
 
 ## General notes
-- "Overall spacing feels cramped on mobile widths""
+- [7] "Overall spacing feels cramped on mobile widths""
 `;
 
 exports[`section 5 serializer contract fixtures > freeze versioned JSON that mirrors the same scene 1`] = `

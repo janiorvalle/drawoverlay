@@ -79,9 +79,9 @@ function serializeMarkdown(
   }
 
   lines.push("", "## General notes");
-  for (const { annotation } of notes) {
+  for (const { annotation, number } of notes) {
     if (annotation.type === "note") {
-      lines.push(`- "${quoted(annotation.text)}"`);
+      lines.push(`- [${String(number)}] "${quoted(annotation.text)}"`);
     }
   }
 
