@@ -35,12 +35,17 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "node -e \"fs.rmSync('dist', { recursive: true, force: true })\" && tsc -p tsconfig.build.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src",
-    "test": "vitest run src"
+    "test": "vitest run src",
+    "test:package": "publint --strict && attw --pack . --profile esm-only"
   },
   "dependencies": {
     "html-to-image": "1.11.13"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "0.18.4",
+    "publint": "0.3.21"
   }
 }

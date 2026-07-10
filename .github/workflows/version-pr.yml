@@ -1,0 +1,35 @@
+name: Version PR
+
+# Changesets bookkeeping: when main carries pending changesets, this opens
+# (or refreshes) a "chore: release" PR that bumps the version and writes the
+# changelog. Publishing stays on the tag-triggered release workflow behind
+# the protected environment — merging the version PR never publishes.
+
+on:
+  push:
+    branches:
+      - main
+
+permissions: {}
+
+jobs:
+  version-pr:
+    name: Open or update the version PR
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.repository == 'janiorvalle/drawover'
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      # The changesets action pushes the version branch with the persisted
+      # checkout credentials; scope stays contents/PR-write on this job only.
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0 # zizmor: ignore[artipacked]
+      - uses: ./.github/actions/setup
+      - name: Create or update the version PR
+        uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0
+        with:
+          title: "chore: release"
+          commit: "chore: release"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}

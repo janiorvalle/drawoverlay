@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Feature ideas and questions
+    url: https://github.com/janiorvalle/drawover/discussions
+    about: Feature requests and usage questions live in Discussions, not the issue tracker.
+  - name: Security reports
+    url: https://github.com/janiorvalle/drawover/security/advisories/new
+    about: Report security issues privately — never in a public issue.

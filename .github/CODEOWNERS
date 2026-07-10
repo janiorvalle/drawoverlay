@@ -1,4 +1,12 @@
+# Review is required on the paths that can change what ships or how it
+# builds. The LAST matching rule wins, so the most specific rules sit at
+# the bottom — and this file's own rule stays last so nothing added above
+# can silently unprotect it.
 /.github/ @janiorvalle
-/package.json @janiorvalle
+/scripts/ @janiorvalle
 /pnpm-lock.yaml @janiorvalle
+/pnpm-workspace.yaml @janiorvalle
 /.npmrc @janiorvalle
+/package.json @janiorvalle
+/packages/drawover/package.json @janiorvalle
+/.github/CODEOWNERS @janiorvalle

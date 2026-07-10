@@ -44,8 +44,21 @@ if (
 ) {
   violations.push("CI must run on pull_request only");
 }
-if (ci.permissions?.contents !== "read") {
-  violations.push("CI top-level contents permission must be read-only");
+if (
+  typeof ci.permissions !== "object" ||
+  ci.permissions === null ||
+  Object.keys(ci.permissions).length !== 0
+) {
+  violations.push("CI top-level permissions must be empty (least privilege)");
+}
+for (const [jobName, job] of Object.entries(ci.jobs ?? {})) {
+  if (typeof job?.permissions !== "object" || job.permissions === null) {
+    violations.push(`CI job ${jobName} must declare explicit permissions`);
+  } else if (
+    Object.values(job.permissions).some((grant) => grant === "write")
+  ) {
+    violations.push(`CI job ${jobName} must not request write access`);
+  }
 }
 
 for (const [jobName, expectedCommand] of Object.entries(expectedGateCommands)) {
@@ -176,11 +189,14 @@ for (const actionFile of actionFiles) {
 }
 
 const allowedMarkdown = new Set([
+  ".changeset/README.md",
+  ".github/pull_request_template.md",
   "AGENTS.md",
   "CLAUDE.md",
   "CONTRIBUTING.md",
   "README.md",
   "SECURITY.md",
+  "packages/drawover/CHANGELOG.md",
   "packages/drawover/README.md",
 ]);
 

@@ -1,0 +1,81 @@
+name: Bug report
+description: Something in drawover misbehaved — a bad selector, a broken screenshot, an overlay glitch.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. The fastest bug report is drawover's own
+        output: press **Copy Markdown** on the page where it misbehaved and
+        paste it below — it's self-contained and usually all we need.
+
+        Ground every answer in what you actually observed. If a field can't
+        be answered from the available evidence, write exactly
+        `NOT_ENOUGH_INFO` instead of guessing — this applies doubly if an
+        AI tool is writing this report for you.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what drawover did instead.
+      placeholder: I pinned the submit button and the copied selector matched a different element...
+    validations:
+      required: true
+  - type: textarea
+    id: copied-output
+    attributes:
+      label: Copied review output
+      description: Paste the Copy Markdown output from the affected page, if you have it. A screenshot of the annotated page helps too.
+      render: markdown
+  - type: textarea
+    id: repro
+    attributes:
+      label: How can we reproduce it?
+      description: Steps, and anything unusual about the host page (heavy CSS framework, Shadow DOM, iframes, canvas).
+    validations:
+      required: true
+  - type: dropdown
+    id: browsers
+    attributes:
+      label: Browser
+      multiple: true
+      options:
+        - Chrome
+        - Edge
+        - Firefox
+        - Safari
+        - Arc or other Chromium-based
+    validations:
+      required: true
+  - type: dropdown
+    id: host-framework
+    attributes:
+      label: Host app framework
+      description: What renders the page you were annotating?
+      options:
+        - React (Vite, CRA, or similar)
+        - Next.js
+        - Vue / Nuxt
+        - Svelte / SvelteKit
+        - Angular
+        - Plain HTML / server-rendered
+        - Other / not sure
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: drawover version
+      description: From your lockfile or `npm ls drawover` — not "latest".
+    validations:
+      required: true
+  - type: dropdown
+    id: regression
+    attributes:
+      label: Did this work before?
+      options:
+        - Not sure
+        - Yes — it worked on an earlier drawover version
+        - No — first time trying this
+    validations:
+      required: true
