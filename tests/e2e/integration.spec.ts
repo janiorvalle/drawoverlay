@@ -254,63 +254,6 @@ test("copies the Markdown and the annotated PNG from separate buttons", async ({
         const index = (pixelY * canvas.width + pixelX) * 4;
         return [...imageData.slice(index, index + 4)];
       };
-      let annotationPixels = 0;
-      for (let y = background.y - 14; y <= background.y + 14; y += 1) {
-        for (let x = background.x - 14; x <= background.x + 14; x += 1) {
-          const [red, green, blue] = sample(x, y);
-          if (
-            red !== undefined &&
-            green !== undefined &&
-            blue !== undefined &&
-            red > 180 &&
-            green < 150 &&
-            blue < 150
-          ) {
-            annotationPixels += 1;
-          }
-        }
-      }
-      let hostPixels = 0;
-      for (let y = host.y; y <= host.y + host.height; y += 1) {
-        for (let x = host.x; x <= host.x + host.width; x += 1) {
-          const [red, green, blue] = sample(x, y);
-          if (
-            red !== undefined &&
-            green !== undefined &&
-            blue !== undefined &&
-            red >= 10 &&
-            red <= 40 &&
-            green >= 90 &&
-            green <= 130 &&
-            blue >= 80 &&
-            blue <= 120
-          ) {
-            hostPixels += 1;
-          }
-        }
-      }
-      // Tailwind v4 archetype: gradients with modern interpolation hints must
-      // survive capture, or white-on-amber CTAs render white-on-white.
-      let gradientPixels = 0;
-      for (let y = gradient.y; y <= gradient.y + gradient.height; y += 1) {
-        for (let x = gradient.x; x <= gradient.x + gradient.width; x += 1) {
-          const [red, green, blue] = sample(x, y);
-          if (
-            red !== undefined &&
-            green !== undefined &&
-            blue !== undefined &&
-            red >= 150 &&
-            red <= 215 &&
-            green >= 50 &&
-            green <= 105 &&
-            blue <= 40
-          ) {
-            gradientPixels += 1;
-          }
-        }
-      }
-      // Logo archetypes: a served bitmap, an inline SVG styled from CSS, and
-      // a CSS background-image must all land in the capture.
       const countInBounds = (
         bounds: { x: number; y: number; width: number; height: number },
         match: (red: number, green: number, blue: number) => boolean,
@@ -331,6 +274,29 @@ test("copies the Markdown and the annotated PNG from separate buttons", async ({
         }
         return matches;
       };
+      const annotationPixels = countInBounds(
+        { x: background.x - 14, y: background.y - 14, width: 28, height: 28 },
+        (red, green, blue) => red > 180 && green < 150 && blue < 150,
+      );
+      const hostPixels = countInBounds(
+        host,
+        (red, green, blue) =>
+          red >= 10 &&
+          red <= 40 &&
+          green >= 90 &&
+          green <= 130 &&
+          blue >= 80 &&
+          blue <= 120,
+      );
+      // Tailwind v4 archetype: gradients with modern interpolation hints must
+      // survive capture, or white-on-amber CTAs render white-on-white.
+      const gradientPixels = countInBounds(
+        gradient,
+        (red, green, blue) =>
+          red >= 150 && red <= 215 && green >= 50 && green <= 105 && blue <= 40,
+      );
+      // Logo archetypes: a served bitmap, an inline SVG styled from CSS, and
+      // a CSS background-image must all land in the capture.
       const logoPixels = countInBounds(
         logo,
         (red, green, blue) =>

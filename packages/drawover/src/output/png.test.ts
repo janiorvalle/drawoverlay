@@ -271,8 +271,7 @@ describe("composited PNG output", () => {
     const localClone = capturePage?.querySelector<HTMLImageElement>(
       '[data-fixture="local"]',
     );
-    // The decoded bitmap is unreadable in this environment, so the rendered
-    // URL stays for the capture library to fetch and inline.
+    // The rendered URL stays for the capture library to inline.
     expect(remoteClone?.getAttribute("src")).toBe(
       "https://assets.example.com/review.png",
     );

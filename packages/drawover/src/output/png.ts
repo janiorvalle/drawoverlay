@@ -428,38 +428,19 @@ function cloneCanvas(source: HTMLCanvasElement): HTMLImageElement | undefined {
 }
 
 /**
- * Reuse the already-decoded bitmap when the browser lets us read it (same
- * origin, or CORS-cleared). Otherwise keep the rendered URL and let the
- * capture library request and inline it — cache-first, so a displayed image
- * rarely costs a round trip. Cross-origin images without CORS stay missing:
- * the bitmap is unreadable and the request is blocked.
+ * Keep the rendered URL (`currentSrc` resolves responsive candidates) and
+ * let the capture library request and inline it — cache-first, so a
+ * displayed image rarely costs a round trip, and the original compressed
+ * bytes come through instead of a synchronous canvas re-encode. Below-fold
+ * lazy images inline the same way even though they never decoded.
+ * Cross-origin images without CORS stay missing: the request is blocked.
  */
 function cloneImage(source: HTMLImageElement): HTMLImageElement {
   const clone = source.cloneNode(false) as HTMLImageElement;
   sanitizeClone(source, clone);
   const rendered = source.currentSrc || source.src;
-  if (!rendered) return clone;
-  clone.src = isLocalResource(rendered)
-    ? rendered
-    : (snapshotImagePixels(source) ?? rendered);
+  if (rendered) clone.src = rendered;
   return clone;
-}
-
-function snapshotImagePixels(source: HTMLImageElement): string | undefined {
-  if (!source.complete || source.naturalWidth === 0) return undefined;
-  const canvas = document.createElement("canvas");
-  canvas.width = source.naturalWidth;
-  canvas.height = source.naturalHeight;
-  const context = canvas.getContext("2d");
-  if (!context) return undefined;
-  try {
-    context.drawImage(source, 0, 0);
-    // A cross-origin bitmap without CORS clearance taints the canvas and
-    // this read throws; the caller falls back to fetching the URL.
-    return canvas.toDataURL();
-  } catch {
-    return undefined;
-  }
 }
 
 const SVG_PRESENTATION_PROPERTIES = [
@@ -499,14 +480,22 @@ function cloneInlineSvg(source: SVGSVGElement): HTMLImageElement | undefined {
   for (const element of svg.querySelectorAll("foreignObject, script")) {
     element.remove();
   }
-  svg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-  svg.setAttribute("width", String(bounds.width));
-  svg.setAttribute("height", String(bounds.height));
   const clone = document.createElement("img");
   sanitizeClone(source, clone);
-  const markup = new XMLSerializer().serializeToString(svg);
-  clone.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(markup)}`;
+  clone.src = svgToDataUri(svg, bounds);
   return clone;
+}
+
+/** Serialize an SVG element into a standalone data-URI image source. */
+function svgToDataUri(
+  svg: SVGSVGElement,
+  size: { width: number; height: number },
+): string {
+  svg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+  svg.setAttribute("width", String(Math.max(size.width, 1)));
+  svg.setAttribute("height", String(Math.max(size.height, 1)));
+  const markup = new XMLSerializer().serializeToString(svg);
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(markup)}`;
 }
 
 function inlineSvgPresentation(
@@ -669,17 +658,13 @@ async function loadSvgImage(svg: SVGSVGElement): Promise<HTMLImageElement> {
   const bounds = svg.getBoundingClientRect();
   const width = Number(svg.getAttribute("width")) || bounds.width;
   const height = Number(svg.getAttribute("height")) || bounds.height;
-  clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
-  clone.setAttribute("width", String(Math.max(width, 1)));
-  clone.setAttribute("height", String(Math.max(height, 1)));
-  const source = new XMLSerializer().serializeToString(clone);
   const image = new Image();
 
   await new Promise<void>((resolve, reject) => {
     image.onload = () => resolve();
     image.onerror = () =>
       reject(new Error("The annotation SVG image failed to load."));
-    image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(source)}`;
+    image.src = svgToDataUri(clone, { width, height });
   });
   return image;
 }

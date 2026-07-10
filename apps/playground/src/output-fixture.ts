@@ -37,7 +37,7 @@ export function installOutputFixture(api: OutputApi): void {
     capturedAt: new Date().toISOString(),
   });
 
-  fixture.copyReview.addEventListener("click", () => {
+  fixture.copyMarkdown.addEventListener("click", () => {
     void run(fixture, async () => {
       await api.writeReviewToClipboard(
         api.serializeReview(scene, pageContext()),
@@ -213,7 +213,7 @@ function svgElement<K extends keyof SVGElementTagNameMap>(
 }
 
 function renderFixturePanel(): {
-  copyReview: HTMLButtonElement;
+  copyMarkdown: HTMLButtonElement;
   download: HTMLAnchorElement;
   exportPng: HTMLButtonElement;
   preview: HTMLImageElement;
@@ -225,7 +225,7 @@ function renderFixturePanel(): {
   panel.innerHTML = `
     <h2>Output fixture</h2>
     <div class="output-actions">
-      <button type="button" data-output="review">Copy review</button>
+      <button type="button" data-output="review">Copy Markdown</button>
       <button type="button" data-output="png">Preview PNG</button>
       <a download="drawover-output-fixture.png" hidden>Open PNG</a>
     </div>
@@ -243,7 +243,7 @@ function renderFixturePanel(): {
     return element;
   };
   return {
-    copyReview: query('[data-output="review"]') as HTMLButtonElement,
+    copyMarkdown: query('[data-output="review"]') as HTMLButtonElement,
     download: query("a[download]") as HTMLAnchorElement,
     exportPng: query('[data-output="png"]') as HTMLButtonElement,
     preview: query(".output-preview") as HTMLImageElement,

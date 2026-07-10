@@ -43,6 +43,7 @@ interface DrawSession {
   kind: "draw";
   pointerId: number;
   start: DocumentPoint;
+  tool: "arrow" | "ellipse" | "line" | "rect";
   preview: RectAnnotation | ArrowAnnotation;
 }
 
@@ -498,14 +499,16 @@ export class SceneEditor {
       this.#tool === "arrow" ||
       this.#tool === "line"
     ) {
+      const tool = this.#tool;
       const preview =
-        this.#tool === "rect" || this.#tool === "ellipse"
-          ? this.#newRect(point, point, this.#tool)
-          : this.#newArrow(point, point, this.#tool);
+        tool === "rect" || tool === "ellipse"
+          ? this.#newRect(point, point, tool)
+          : this.#newArrow(point, point, tool);
       this.#session = {
         kind: "draw",
         pointerId: event.pointerId,
         start: point,
+        tool,
         preview,
       };
       this.#capture(event.pointerId);
@@ -635,17 +638,17 @@ export class SceneEditor {
     switch (session.kind) {
       case "draw":
         session.preview =
-          session.preview.type === "rect"
+          session.tool === "rect" || session.tool === "ellipse"
             ? this.#newRect(
                 session.start,
                 point,
-                session.preview.shape === "ellipse" ? "ellipse" : "rect",
+                session.tool,
                 session.preview.id,
               )
             : this.#newArrow(
                 session.start,
                 point,
-                session.preview.variant === "line" ? "line" : "arrow",
+                session.tool,
                 session.preview.id,
               );
         break;
