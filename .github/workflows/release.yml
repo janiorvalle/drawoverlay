@@ -6,20 +6,30 @@ on:
       - "v*"
 
 permissions:
-  contents: read
-  id-token: write
+  contents: read # checkout
+  id-token: write # npm trusted publishing exchanges the OIDC token
+
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 jobs:
   publish:
     name: Verify and publish
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Forks must never attempt a publish, even with a copied tag.
+    if: github.repository == 'janiorvalle/drawover'
     environment: release
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/setup
       - name: Confirm tokenless trusted publishing
         run: test -z "${NODE_AUTH_TOKEN:-}" && test -z "${NPM_TOKEN:-}"
-      - run: npm install --global npm@11.13.0
+      # Trusted publishing needs a newer npm than the runner ships; pinned.
+      - run: npm install --global npm@11.13.0 # zizmor: ignore[adhoc-packages]
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm verify
       - name: Publish with trusted provenance

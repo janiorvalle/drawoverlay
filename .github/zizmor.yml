@@ -1,0 +1,31 @@
+# Suppressions carry their reasons; anything unexplained here is drift.
+rules:
+  # cla.yml is a frozen, owner-approved contract — verify-infra.mjs pins its
+  # exact hash because the contributor-assistant action is archived and the
+  # workflow must never change without sign-off. It never checks out PR code
+  # (also enforced by verify-infra.mjs), which is what makes its
+  # pull_request_target trigger and write permissions acceptable.
+  dangerous-triggers:
+    ignore:
+      - cla.yml
+  excessive-permissions:
+    ignore:
+      - cla.yml
+      # release.yml declares permissions at the top level because
+      # verify-infra.mjs pins that shape; it has exactly one job, so the
+      # scope is identical to job-level grants.
+      - release.yml
+  undocumented-permissions:
+    ignore:
+      - cla.yml
+  concurrency-limits:
+    ignore:
+      - cla.yml
+  # The version-pr checkout deliberately keeps its credentials — the
+  # changesets action needs them to push the version branch.
+  artipacked:
+    ignore:
+      - version-pr.yml
+  archived-uses:
+    ignore:
+      - cla.yml

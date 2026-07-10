@@ -39,6 +39,20 @@ If drawover produced bad output on your app (a brittle selector, a useless
 spatial description, a broken screenshot), the copied Markdown itself is a
 great bug report — paste it into the issue.
 
+A couple of PR types we'll close without much ceremony: refactor-only PRs
+(moving code around without changing behavior) and drive-by style changes.
+If you think a refactor is genuinely needed, open a Discussion first.
+
+## AI-assisted contributions
+
+AI-written code is welcome here — just be upfront about it. Mark the PR as
+AI-assisted, make sure you've read and understood every line yourself, and
+ground the description in what you actually verified, not what the tool
+claims. If a review bot or a maintainer asks a question, you're the one who
+answers it — "the AI said so" isn't an answer. The same applies to issues:
+if you (or your tool) can't back a claim with evidence from your own
+reproduction, say so instead of guessing.
+
 ## Licensing
 
 Contributions are licensed under the MIT License and the project's
