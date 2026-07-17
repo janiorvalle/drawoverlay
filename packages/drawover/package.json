@@ -45,7 +45,7 @@
     "html-to-image": "1.11.13"
   },
   "devDependencies": {
-    "@arethetypeswrong/cli": "0.18.4",
+    "@arethetypeswrong/cli": "0.18.5",
     "publint": "0.3.21"
   }
 }
