@@ -178,7 +178,10 @@ jobs:
           fail-on-severity: moderate
           fail-on-scopes: runtime, development, unknown
           warn-only: false
-          allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC
+          # MPL-2.0 (lightningcss via vite), BlueOak-1.0.0 (minimatch), and
+          # CC-BY-4.0 (caniuse-lite data) are dev-only transitives; the
+          # published package permits no runtime dependencies at all.
+          allow-licenses: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, MPL-2.0, BlueOak-1.0.0, CC-BY-4.0
       - name: Enforce runtime dependency policy
         run: node scripts/verify-dependencies.mjs
 
