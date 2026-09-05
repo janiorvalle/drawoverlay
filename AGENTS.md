@@ -1,5 +1,7 @@
 # Working on drawoverlay
 
+Tracker: github-issues
+
 Conventions for anyone (human or agent) changing this codebase. These aren't
 style preferences — most of them are enforced by CI, and the rest exist
 because breaking them breaks the product's core promises.
